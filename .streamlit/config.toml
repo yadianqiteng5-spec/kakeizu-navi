@@ -1,0 +1,22 @@
+# 本番用 Streamlit 設定（公開時に有効化される）
+[server]
+headless = true
+runOnSave = false
+fileWatcherType = "none"
+enableCORS = false
+enableXsrfProtection = true
+maxUploadSize = 10              # 画像5MB上限の余裕分
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#2C3E50"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8F9FA"
+textColor = "#2C3E50"
+font = "sans serif"
+
+[client]
+showErrorDetails = false        # 本番ではエラー詳細を非表示（情報漏洩防止）
+toolbarMode = "minimal"

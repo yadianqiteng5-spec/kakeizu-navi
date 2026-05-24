@@ -1,0 +1,40 @@
+# Fly.io 設定ファイル — 家系図Navi
+# 公開後にカスタムドメインを追加: fly certs add kakeizu.drumnavi.com
+
+app = "kakeizu-navi"            # ← 全Fly.io内でユニークに（重複する場合は別名）
+primary_region = "nrt"          # Narita（東京）— 国内ユーザー向けに最速
+
+[build]
+
+[env]
+  PYTHONUNBUFFERED = "1"
+  STREAMLIT_SERVER_PORT = "8501"
+
+# HTTP / WebSocket サービス（Streamlit はWebSocket必須）
+[http_service]
+  internal_port = 8501
+  force_https = true            # HTTPSを強制
+  auto_stop_machines = "stop"   # アイドルで自動停止（コスト節約）
+  auto_start_machines = true    # アクセスで自動起動
+  min_machines_running = 0      # 常時稼働させたい場合は 1 に変更（月$2-4増）
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 20
+    hard_limit = 30
+
+# WebSocket がスリープ判定で切られないように長めに設定
+[[http_service.checks]]
+  grace_period = "20s"
+  interval = "30s"
+  method = "GET"
+  timeout = "10s"
+  path = "/_stcore/health"
+
+# VM スペック
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512               # Streamlit + reportlab + plotly に十分
+                                # 256MBではOOM多発、512MBが現実的下限

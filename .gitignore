@@ -1,0 +1,33 @@
+# Streamlit / 環境変数
+.streamlit/secrets.toml
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+
+# Fly.io
+.fly/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# テスト・一時ファイル
+test_output.*
+*.pdf
+.pytest_cache/
+.mypy_cache/
+
+# Claude Code
+.claude/
