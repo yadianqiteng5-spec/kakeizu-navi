@@ -13,7 +13,24 @@ _FALLBACK_MODEL = "gemini-1.5-flash"
 
 
 def _get_api_key() -> Optional[str]:
-    """環境変数からAPIキーを取得（GEMINI_API_KEY優先、GOOGLE_API_KEYフォールバック）"""
+    """
+    APIキーを取得（優先順位）:
+    1. st.secrets["GEMINI_API_KEY"] - Streamlit Cloud Secrets / ローカル secrets.toml
+    2. st.secrets["GOOGLE_API_KEY"] - 同上
+    3. 環境変数 GEMINI_API_KEY
+    4. 環境変数 GOOGLE_API_KEY
+    """
+    try:
+        import streamlit as st
+        for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+            try:
+                val = st.secrets.get(key)
+                if val:
+                    return val
+            except Exception:
+                pass
+    except Exception:
+        pass
     return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
 

@@ -14,15 +14,30 @@ import base64
 import anthropic
 
 
+def _get_api_key() -> Optional[str]:
+    """st.secrets → 環境変数 の順で ANTHROPIC_API_KEY を取得"""
+    try:
+        import streamlit as st
+        try:
+            val = st.secrets.get("ANTHROPIC_API_KEY")
+            if val:
+                return val
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return os.environ.get("ANTHROPIC_API_KEY")
+
+
 def _get_client() -> Optional[anthropic.Anthropic]:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = _get_api_key()
     if not api_key:
         return None
     return anthropic.Anthropic(api_key=api_key)
 
 
 def is_api_available() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return bool(_get_api_key())
 
 
 # この指示をすべてのプロンプトの冒頭に付加する
