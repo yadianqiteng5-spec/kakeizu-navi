@@ -169,6 +169,115 @@ _AUDIO_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話者
 - is_renounced は明確に「相続放棄した」と述べた場合のみ true"""
 
 
+_TRANSCRIBE_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話されている内容を**日本語で文字起こし**してください。
+ルール:
+- 文字起こしの本文のみを返してください（前置き・後書き・引用符・コードブロック不要）
+- 話者が言った言葉をできるだけ忠実に書き起こす
+- 句読点を適切に補い、読みやすくする
+- 「えーと」「あのー」等のフィラーは省略可"""
+
+
+_TEXT_EXTRACT_PROMPT_TMPL = _PRIVACY_PREAMBLE + """以下のテキストから家族関係を抽出してください。
+
+テキスト:
+{text}
+
+以下のJSON形式のみで返してください（前置き・コードブロック不要、JSONオブジェクトのみ）:
+{{
+  "persons": [
+    {{
+      "id": "p1",
+      "name": "山田太郎",
+      "gender": "male",
+      "birth_year": 1950,
+      "is_alive": false,
+      "is_propositus": true,
+      "assets_yen": 50000000,
+      "has_business_shares": true,
+      "is_renounced": false,
+      "notes": ""
+    }}
+  ],
+  "relationships": [
+    {{"person1_id": "p1", "person2_id": "p2", "rel_type": "spouse"}},
+    {{"person1_id": "p1", "person2_id": "p3", "rel_type": "parent_child"}}
+  ]
+}}
+
+ルール:
+- is_propositus=true は被相続人（亡くなった方・相続される側）のみ1名
+- is_alive=false は故人
+- rel_type は "spouse"（配偶者）または "parent_child"（person1が親→person2が子）
+- gender は "male" / "female" / "unknown"
+- birth_year・assets_yen が不明なら null / 0
+- has_business_shares は自社株・非上場株を保有していれば true
+- is_renounced は明確に「相続放棄した」と述べた場合のみ true"""
+
+
+def transcribe_audio(
+    audio_bytes: bytes, mime_type: str = "audio/wav"
+) -> Optional[str]:
+    """
+    音声を文字起こしのみ実行する（家族抽出はしない）。
+    呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return None
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return None
+
+    try:
+        genai.configure(api_key=api_key)
+        audio_part = {"mime_type": mime_type, "data": audio_bytes}
+
+        try:
+            model = genai.GenerativeModel(_MODEL_NAME)
+            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
+        except Exception:
+            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
+
+        return (response.text or "").strip() or None
+    except Exception:
+        return None
+
+
+def extract_family_from_text_gemini(text: str) -> Optional[dict]:
+    """テキストから家族構成を抽出（Gemini版）"""
+    api_key = _get_api_key()
+    if not api_key:
+        return None
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return None
+
+    prompt = _TEXT_EXTRACT_PROMPT_TMPL.format(text=text)
+
+    try:
+        genai.configure(api_key=api_key)
+        try:
+            model = genai.GenerativeModel(_MODEL_NAME)
+            response = model.generate_content(prompt)
+        except Exception:
+            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            response = model.generate_content(prompt)
+
+        content = response.text or ""
+        json_match = re.search(r"\{[\s\S]*\}", content)
+        if json_match:
+            return json.loads(json_match.group())
+    except Exception:
+        pass
+
+    return None
+
+
 def extract_family_from_audio(
     audio_bytes: bytes, mime_type: str = "audio/wav"
 ) -> Optional[dict]:

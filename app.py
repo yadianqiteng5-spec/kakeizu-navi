@@ -27,6 +27,7 @@ def _init_session():
         "step":         0,       # 0=入力, 1=確認修正, 2=結果
         "ai_raw_result": None,
         "edit_state":   None,
+        "audio_transcript": "",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -158,7 +159,7 @@ if st.session_state.step == 0:
     tab_text, tab_image, tab_audio = st.tabs([
         "💬 テキスト入力",
         "📷 画像アップロード",
-        "🎤 音声入力（1ステップAI解析）",
+        "🎤 音声入力（2ステップ：文字起こし→解析）",
     ])
 
     with tab_text:
@@ -196,11 +197,11 @@ if st.session_state.step == 0:
                 st.success(f"✅ {uploaded.name}（{uploaded.size/1024:.0f} KB）")
                 st.image(uploaded, caption="アップロード画像", use_column_width=True)
 
-    # ── 音声入力タブ（録音→Geminiで文字起こし＋家族抽出を1ステップ）─────────
+    # ── 音声入力タブ（2ステップ：①文字起こし → ②内容確認 → ③家族抽出）──────
     with tab_audio:
         st.caption(
-            "マイクで家族関係を説明してください。"
-            "Geminiが**音声の文字起こしと家族構成抽出を1ステップで**実行します。"
+            "マイクで家族関係を説明してください。\n"
+            "**ステップ①** Geminiで文字起こし → **ステップ②** 内容を確認・編集 → **ステップ③** 家族構成を解析"
         )
         try:
             audio_input = st.audio_input(
@@ -226,41 +227,86 @@ if st.session_state.step == 0:
                     "設定されていないため、音声解析は利用できません。"
                 )
             else:
-                audio_analyze_btn = st.button(
-                    "🤖 音声をAIで解析する（Gemini）",
-                    type="primary",
+                # ── ステップ① 文字起こしボタン ─────────────────────────────
+                transcribe_btn = st.button(
+                    "🎙️ ステップ① 文字起こしする（Gemini）",
+                    type="primary" if not st.session_state.audio_transcript else "secondary",
                     use_container_width=True,
                     disabled=remaining_calls <= 0,
-                    key="analyze_audio_btn",
+                    key="transcribe_audio_btn",
                 )
 
-                if audio_analyze_btn:
-                    from core.gemini_client import extract_family_from_audio
-                    audio_bytes = audio_input.getvalue()   # bytes（オンメモリのみ）
+                if transcribe_btn:
+                    from core.gemini_client import transcribe_audio
+                    audio_bytes = audio_input.getvalue()
                     mime = getattr(audio_input, "type", None) or "audio/wav"
 
-                    with st.spinner("Geminiが音声を文字起こし＋家族構成を解析中...（15〜40秒）"):
-                        result = extract_family_from_audio(audio_bytes, mime)
+                    with st.spinner("Geminiが音声を文字起こし中...（10〜20秒）"):
+                        transcript = transcribe_audio(audio_bytes, mime)
 
-                    # 音声バイトを即時解放
-                    del audio_bytes
+                    del audio_bytes  # 即時解放
 
-                    if result and result.get("persons"):
-                        if result.get("transcript"):
-                            with st.expander("📝 文字起こし結果（参考）"):
-                                st.write(result["transcript"])
-                        st.session_state.ai_raw_result = result
+                    if transcript:
+                        st.session_state.audio_transcript = transcript
                         st.session_state.llm_count += 1
-                        st.session_state.edit_state = None
-                        st.session_state.step = 1
                         st.rerun()
                     else:
                         st.error(
-                            "解析に失敗しました。次をお試しください:\n"
+                            "文字起こしに失敗しました。次をお試しください:\n"
                             "- もう少しゆっくり・はっきり話す\n"
-                            "- 人物名・続柄・生年などを明確に述べる\n"
+                            "- 録音し直す（マイクの音量を確認）\n"
                             "- テキスト入力タブに切り替える"
                         )
+
+        # ── ステップ② 文字起こし結果の確認・編集 → ステップ③ 家族抽出 ──────
+        if st.session_state.audio_transcript:
+            st.markdown("---")
+            st.markdown("##### 📝 ステップ② 文字起こし結果（編集可能）")
+            edited_transcript = st.text_area(
+                "下記の内容を確認し、必要に応じて修正してください",
+                value=st.session_state.audio_transcript,
+                height=180,
+                key="audio_transcript_editor",
+            )
+            st.session_state.audio_transcript = edited_transcript
+
+            ac1, ac2 = st.columns([3, 1])
+            with ac1:
+                extract_btn = st.button(
+                    "🔍 ステップ③ この内容から家族構成を解析する",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=(remaining_calls <= 0 or not edited_transcript.strip()),
+                    key="extract_from_transcript_btn",
+                )
+            with ac2:
+                clear_btn = st.button(
+                    "🗑 クリア",
+                    use_container_width=True,
+                    key="clear_transcript_btn",
+                )
+
+            if clear_btn:
+                st.session_state.audio_transcript = ""
+                st.rerun()
+
+            if extract_btn:
+                from core.gemini_client import extract_family_from_text_gemini
+                with st.spinner("Geminiが家族構成を解析中...（10〜20秒）"):
+                    result = extract_family_from_text_gemini(edited_transcript)
+
+                if result and result.get("persons"):
+                    st.session_state.ai_raw_result = result
+                    st.session_state.llm_count += 1
+                    st.session_state.edit_state = None
+                    st.session_state.audio_transcript = ""   # クリア
+                    st.session_state.step = 1
+                    st.rerun()
+                else:
+                    st.error(
+                        "家族構成の抽出に失敗しました。\n"
+                        "文字起こし結果に人物名・続柄・生年などを補足してから再度お試しください。"
+                    )
 
     st.markdown("")
     c1, c2, c3 = st.columns([2, 2, 4])
