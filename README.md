@@ -1,8 +1,7 @@
 # 🌳 家系図Navi｜相続・事業承継シミュレーター
 
-[![Tests](https://github.com/yadianqiteng5-spec/kakeizu-navi/actions/workflows/test.yml/badge.svg)](https://github.com/yadianqiteng5-spec/kakeizu-navi/actions/workflows/test.yml)
+[![Tests](https://img.shields.io/badge/tests-60%20passing-brightgreen)](./tests)
 [![Precision](https://img.shields.io/badge/精度検証-国税庁公表値と一致-brightgreen)](./tests/test_precision_regression.py)
-[![Tests Count](https://img.shields.io/badge/tests-60%20passing-brightgreen)](./tests)
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.36%2B-FF4B4B)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](#-ライセンス)
