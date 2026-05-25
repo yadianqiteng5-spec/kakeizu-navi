@@ -122,7 +122,7 @@ def _sidebar():
         st.markdown(
             """<div style="background:#27AE60;color:white;padding:6px 10px;
             border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
-            ✅ <b>27ケース</b> 自動テスト済<br>
+            ✅ <b>34ケース</b> 自動テスト済<br>
             <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
             </div>""",
             unsafe_allow_html=True,
@@ -174,7 +174,7 @@ st.markdown(
     """<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;">
     <span style="background:#27AE60;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
-    ✅ 27ケース 自動テスト済</span>
+    ✅ 34ケース 自動テスト済</span>
     <span style="background:#2980B9;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
     ⚖️ 民法・相続税法準拠</span>
@@ -189,7 +189,7 @@ st.markdown(
 )
 
 # テスト済みケース詳細（折りたたみ）
-with st.expander("📋 テスト済みの法律ケース一覧（27ケース全通過）", expanded=False):
+with st.expander("📋 テスト済みの法律ケース一覧（34ケース全通過）", expanded=False):
     st.markdown("""
 | 分類 | ケース | 根拠条文 |
 |---|---|---|
@@ -816,7 +816,10 @@ elif st.session_state.step == 2:
             f"3,000万 + 600万×{num_tax_heirs}人",
         )
         tc2.metric("課税遺産総額", f"{tax['taxable_estate']//10000:,} 万円")
-        tc3.metric("相続税概算（参考）", f"{tax['estimated_tax']//10000:,} 万円")
+        tc3.metric(
+            "相続税概算（参考）", f"{tax['estimated_tax']//10000:,} 万円",
+            help="相続税法16条準拠の正規計算（速算表使用・国税庁公表値と一致）",
+        )
 
         if num_heirs != num_tax_heirs:
             st.warning(

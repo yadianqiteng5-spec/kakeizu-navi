@@ -51,7 +51,7 @@
 
 ## ⚖️ カバー済み法律ケース（自動テスト済み）
 
-`tests/test_inheritance.py` の **27ケース全通過** を確認済み。`python -X utf8 tests/test_inheritance.py` で再現可能。
+`tests/test_inheritance.py` の **34ケース全通過**（国税庁速算表と照合済み） を確認済み。`python -X utf8 tests/test_inheritance.py` で再現可能。
 
 | 分類 | ケース | 根拠条文 |
 |---|---|---|

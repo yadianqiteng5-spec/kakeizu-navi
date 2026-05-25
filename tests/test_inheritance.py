@@ -416,6 +416,96 @@ def test_small_residential_none():
 
 
 # ─────────────────────────────────────────────────────────────────
+# 相続税額の正確性検証（国税庁・税理士会公表値で照合）
+# ─────────────────────────────────────────────────────────────────
+
+def test_tax_bracket_basic_3000man():
+    """法定相続分按分後3,000万円 → 15%×3,000万 - 50万 = 400万円"""
+    from core.inheritance import _inheritance_tax_per_bracket
+    assert _inheritance_tax_per_bracket(30_000_000) == 4_000_000
+
+
+def test_tax_bracket_5000man():
+    """5,000万円 → 20%×5,000万 - 200万 = 800万円"""
+    from core.inheritance import _inheritance_tax_per_bracket
+    assert _inheritance_tax_per_bracket(50_000_000) == 8_000_000
+
+
+def test_tax_bracket_1oku():
+    """1億円 → 30%×1億 - 700万 = 2,300万円"""
+    from core.inheritance import _inheritance_tax_per_bracket
+    assert _inheritance_tax_per_bracket(100_000_000) == 23_000_000
+
+
+def test_tax_estimate_realistic_case():
+    """
+    実例検証: 課税価格1億円・配偶者+子2名（法定相続人3名）
+    → 基礎控除 3,000万+600万×3 = 4,800万
+    → 課税遺産総額 5,200万
+    → 配偶者2,600万: 15%×2,600万-50万=340万
+    → 子1,300万ずつ: 15%×1,300万-50万=145万×2=290万
+    → 相続税の総額 約630万円（国税庁シミュレーターと一致）
+
+    ただし本関数は均等按分の簡略形（5,200/3=約1,733万）を使うため、
+    各人 15%×1,733万-50万=210万×3 ≈ 630万 で概ね合致。
+    """
+    from core.inheritance import get_inheritance_tax_estimate
+    from fractions import Fraction
+    shares = {"a": Fraction(1, 2), "b": Fraction(1, 4), "c": Fraction(1, 4)}
+    r = get_inheritance_tax_estimate(shares, 100_000_000, 3, 3)
+    assert r["basic_deduction"] == 48_000_000
+    assert r["taxable_estate"] == 52_000_000
+    # 5,200万/3=1,733万 × 15% - 50万 = 210万、×3 = 630万 ±誤差
+    assert 6_000_000 <= r["estimated_tax"] <= 7_000_000
+
+
+def test_secondary_inheritance_spouse_deduction_works():
+    """
+    1.6億円・配偶者+子2名のケース:
+    - 配偶者0%取得: 配偶者控除0、税額は子に偏る
+    - 配偶者100%取得: 配偶者控除フル適用で一次=0、二次は配偶者の財産で課税
+    - 通常、配偶者法定相続分(50%)取得が中庸
+    """
+    from core.inheritance import calculate_secondary_inheritance
+    r = calculate_secondary_inheritance(160_000_000, num_children=2)
+    s0, s50, s100 = r["scenarios"]
+
+    # 配偶者100%取得 → 一次は配偶者控除でほぼ0、二次のみ
+    assert s100["primary_tax"] == 0  # 1.6億ピッタリで控除フル
+    assert s100["secondary_tax"] > 0  # 二次で課税
+
+    # 配偶者0%取得 → 一次のみ課税、二次は0
+    assert s0["secondary_tax"] == 0  # 配偶者の財産が0なので
+    assert s0["primary_tax"] > 0
+
+    # 通常、配偶者100%取得は一次は得だが二次の負担が重く、
+    # 法定相続分取得が合計税額として最適となるケースが多い
+    # ここでは差が出ることのみ確認
+    totals = [s0["total_tax"], s50["total_tax"], s100["total_tax"]]
+    assert max(totals) > min(totals)
+
+
+def test_secondary_inheritance_spouse_over_16oku():
+    """3億円・配偶者+子1名: 配偶者100%取得でも控除上限超で一次に税が発生"""
+    from core.inheritance import calculate_secondary_inheritance
+    r = calculate_secondary_inheritance(300_000_000, num_children=1)
+    s100 = r["scenarios"][2]
+    # 配偶者控除上限=max(1/2=1.5億, 1.6億)=1.6億 → 1.4億分に課税
+    assert s100["primary_tax"] > 0
+
+
+def test_gift_tax_special_5million_per_year():
+    """
+    特例税率: 年500万円贈与（基礎控除110万後の課税対象390万円）
+    → 390万 × 15% - 10万 = 48.5万円（×1人×1年）
+    """
+    from core.inheritance import compare_gift_strategies
+    r = compare_gift_strategies(5_000_000, years=1, num_recipients=1)
+    # 課税対象 390万、特例税率 15%-10万 = 48.5万
+    assert 480_000 <= r["annual"]["taxable_gift_tax"] <= 490_000
+
+
+# ─────────────────────────────────────────────────────────────────
 # 二次相続シミュレーション
 # ─────────────────────────────────────────────────────────────────
 

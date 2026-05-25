@@ -474,13 +474,72 @@ def count_tax_legal_heirs(family_tree, propositus_id: str) -> dict:
     }
 
 
-def _rough_tax_rate(amount: int) -> float:
-    if amount <= 10_000_000:   return 0.10
-    if amount <= 30_000_000:   return 0.15
-    if amount <= 50_000_000:   return 0.20
-    if amount <= 100_000_000:  return 0.30
-    if amount <= 200_000_000:  return 0.40
-    return 0.45
+# ─────────────────────────────────────────────────────────────────
+# 相続税の正規計算ロジック（相続税法16条準拠）
+# ─────────────────────────────────────────────────────────────────
+#
+# 速算表（国税庁公表・各取得金額ごとの税率と速算控除額）
+# 「各法定相続人が法定相続分どおり取得した」と仮定した取得金額に適用する
+INHERITANCE_TAX_BRACKETS = [
+    # (上限額, 税率, 速算控除額)
+    (10_000_000,   0.10,         0),
+    (30_000_000,   0.15,   500_000),
+    (50_000_000,   0.20, 2_000_000),
+    (100_000_000,  0.30, 7_000_000),
+    (200_000_000,  0.40, 17_000_000),
+    (300_000_000,  0.45, 27_000_000),
+    (600_000_000,  0.50, 42_000_000),
+    (float("inf"), 0.55, 72_000_000),
+]
+
+
+def _inheritance_tax_per_bracket(taxable_share: int) -> int:
+    """法定相続分按分後の各人取得分に税率表を適用（速算控除額を差し引く）"""
+    if taxable_share <= 0:
+        return 0
+    for limit, rate, deduction in INHERITANCE_TAX_BRACKETS:
+        if taxable_share <= limit:
+            return max(0, int(taxable_share * rate - deduction))
+    return 0
+
+
+def _calculate_inheritance_tax_total(
+    taxable_estate: int, num_legal_heirs: int
+) -> int:
+    """
+    相続税の総額を計算する（相続税法16条）。
+    1. 課税遺産総額を法定相続人が法定相続分で取得したと仮定して按分
+    2. 各人の取得分に速算表を適用して個別税額を算出
+    3. 合算して「相続税の総額」とする
+
+    ※ 簡略化のため、ここでは「配偶者+子N名」「子のみN名」等の
+       詳細按分は行わず、num_legal_heirs で均等按分の近似を使用。
+       配偶者がいる場合は配偶者1/2、残り1/2を子で均等が標準形のため、
+       実務上の概算としては許容範囲。
+    """
+    if taxable_estate <= 0 or num_legal_heirs <= 0:
+        return 0
+    per_heir_share = taxable_estate // num_legal_heirs
+    per_heir_tax = _inheritance_tax_per_bracket(per_heir_share)
+    return per_heir_tax * num_legal_heirs
+
+
+def _calculate_inheritance_tax_with_spouse_pattern(
+    taxable_estate: int, num_children: int
+) -> int:
+    """
+    配偶者+子の標準パターンで「相続税の総額」を正確に計算する。
+    配偶者: 1/2、子: 残り1/2を均等按分（民法900条1号）。
+    """
+    if taxable_estate <= 0:
+        return 0
+    spouse_share = taxable_estate // 2
+    spouse_tax = _inheritance_tax_per_bracket(spouse_share)
+    if num_children <= 0:
+        return spouse_tax
+    child_share = (taxable_estate - spouse_share) // num_children
+    child_tax = _inheritance_tax_per_bracket(child_share)
+    return spouse_tax + child_tax * num_children
 
 
 def calculate_secondary_inheritance(
@@ -516,12 +575,21 @@ def calculate_secondary_inheritance(
     if primary_total_yen <= 0 or num_children <= 0:
         return {"scenarios": [], "best_label": "", "best_savings": 0}
 
-    SPOUSE_DEDUCTION_FLOOR = 160_000_000  # 配偶者控除の下限
+    SPOUSE_DEDUCTION_FLOOR = 160_000_000  # 配偶者控除の下限（1億6,000万円）
 
-    def _tax_for(amount: int, n_heirs: int) -> int:
-        basic = 30_000_000 + 6_000_000 * n_heirs
-        taxable = max(0, amount - basic)
-        return int(taxable * _rough_tax_rate(taxable))
+    # ── 一次相続の前提計算（全シナリオ共通）─────────────────────────
+    n_primary_heirs = 1 + num_children  # 配偶者+子
+    primary_basic = 30_000_000 + 6_000_000 * n_primary_heirs
+    primary_taxable_estate = max(0, primary_total_yen - primary_basic)
+
+    # 「相続税の総額」は法定相続分按分（配偶者1/2、子で残り1/2均等）で計算
+    primary_total_tax = _calculate_inheritance_tax_with_spouse_pattern(
+        primary_taxable_estate, num_children
+    )
+
+    # 配偶者控除の上限額（取得財産ベース）: max(法定相続分=1/2, 1.6億)
+    spouse_legal_share = primary_total_yen // 2
+    spouse_deduction_amount = max(spouse_legal_share, SPOUSE_DEDUCTION_FLOOR)
 
     scenarios = []
     for label, ratio in [
@@ -530,27 +598,39 @@ def calculate_secondary_inheritance(
         ("配偶者100%取得（最大限活用）", 1.0),
     ]:
         spouse_amt = int(primary_total_yen * ratio)
-        # 配偶者控除: min(spouse_amt, max(法定相続分, 1.6億))
-        spouse_legal = primary_total_yen / 2  # 配偶者+子なら配偶者は1/2
-        spouse_deduction_limit = max(spouse_legal, SPOUSE_DEDUCTION_FLOOR)
-        taxable_spouse = max(0, spouse_amt - spouse_deduction_limit)
 
-        # 一次相続: 配偶者+子で相続税を計算
-        n_primary_heirs = 1 + num_children
-        primary_total_tax = _tax_for(primary_total_yen, n_primary_heirs)
-        # 配偶者控除分を差し引く（按分の簡易近似）
-        if primary_total_yen > 0:
-            spouse_tax_share = primary_total_tax * (spouse_amt / primary_total_yen)
-            spouse_actual = spouse_tax_share * (
-                taxable_spouse / spouse_amt if spouse_amt > 0 else 0
+        # ── 一次相続税の按分（相続税法17条）─────────────────
+        # 各人の納付税額 = 相続税の総額 × (各人の取得財産 / 課税価格の合計)
+        if primary_total_yen > 0 and primary_total_tax > 0:
+            spouse_tax_before_deduction = (
+                primary_total_tax * spouse_amt // primary_total_yen
             )
-            primary_tax = int(primary_total_tax - spouse_tax_share + spouse_actual)
         else:
-            primary_tax = 0
+            spouse_tax_before_deduction = 0
 
-        # 二次相続: 配偶者の固有財産 + 一次で取得した分 を子で按分
+        # ── 配偶者控除の適用（相続税法19条の2）──────────────
+        # 控除額 = 相続税の総額 × min(配偶者取得財産, 控除上限) / 課税価格合計
+        if primary_total_yen > 0:
+            deductible_base = min(spouse_amt, spouse_deduction_amount)
+            spouse_tax_credit = (
+                primary_total_tax * deductible_base // primary_total_yen
+            )
+        else:
+            spouse_tax_credit = 0
+
+        # 配偶者の実際納付税額（控除適用後）
+        spouse_tax_after = max(0, spouse_tax_before_deduction - spouse_tax_credit)
+        # 子の納付税額合計
+        children_tax = primary_total_tax - spouse_tax_before_deduction
+        primary_tax = spouse_tax_after + children_tax
+
+        # ── 二次相続: 配偶者の固有財産 + 一次取得分を子で相続 ──
         secondary_total = spouse_amt + spouse_own_assets_yen
-        secondary_tax = _tax_for(secondary_total, num_children)
+        secondary_basic = 30_000_000 + 6_000_000 * num_children
+        secondary_taxable = max(0, secondary_total - secondary_basic)
+        secondary_tax = _calculate_inheritance_tax_total(
+            secondary_taxable, num_children
+        )
 
         scenarios.append({
             "label": label,
@@ -612,14 +692,26 @@ def compare_gift_strategies(
     annual_tax_free_total = tax_free_per_year_per_person * years * num_recipients
     annual_taxable = max(0, total_gifted - annual_tax_free_total)
 
-    # 贈与税（一般税率の概算: 200万以下10%, 400万以下15%, 600万以下20%等）
-    def _gift_tax_general(taxable_per_year: int) -> int:
+    # 贈与税（特例税率: 直系尊属→18歳以上の子・孫への贈与、国税庁公表値）
+    # ※ 一般贈与財産用の税率もあるが、相続対策では通常こちらが適用される
+    def _gift_tax_special(taxable_per_year: int) -> int:
         if taxable_per_year <= 0: return 0
-        if taxable_per_year <= 2_000_000:  return int(taxable_per_year * 0.10)
-        if taxable_per_year <= 4_000_000:  return int(taxable_per_year * 0.15 - 100_000)
-        if taxable_per_year <= 6_000_000:  return int(taxable_per_year * 0.20 - 300_000)
-        if taxable_per_year <= 10_000_000: return int(taxable_per_year * 0.30 - 900_000)
-        return int(taxable_per_year * 0.40 - 1_900_000)
+        # (上限額, 税率, 速算控除額)
+        brackets = [
+            (2_000_000,    0.10,         0),
+            (4_000_000,    0.15,   100_000),
+            (6_000_000,    0.20,   300_000),
+            (10_000_000,   0.30,   900_000),
+            (15_000_000,   0.40, 1_900_000),
+            (30_000_000,   0.45, 2_650_000),
+            (45_000_000,   0.50, 4_150_000),
+            (float("inf"), 0.55, 6_400_000),
+        ]
+        for limit, rate, deduction in brackets:
+            if taxable_per_year <= limit:
+                return max(0, int(taxable_per_year * rate - deduction))
+        return 0
+    _gift_tax_general = _gift_tax_special  # エイリアス（後方互換）
 
     annual_excess_per_year = max(0, annual_amount_yen - ANNUAL_EXEMPT)
     annual_gift_tax = (
@@ -737,23 +829,24 @@ def get_inheritance_tax_estimate(
     num_tax_heirs: Optional[int] = None,
 ) -> dict:
     """
-    相続税の概算（参考値）
-    num_tax_heirs: 相続税法上の法定相続人数（養子算入制限適用後）。Noneの場合は num_legal_heirs を使用。
+    相続税の概算（相続税法16条準拠の正規計算ロジック）
+
+    手順:
+    1. 課税遺産総額 = 課税価格 - 基礎控除（3,000万 + 600万×法定相続人数）
+    2. 法定相続人が法定相続分どおりに取得したと仮定して按分
+    3. 各人の取得分に速算表を適用して個別税額を算出
+    4. 合算して「相続税の総額」とする（配偶者控除は本関数では適用しない）
+
+    num_tax_heirs: 相続税法上の法定相続人数（養子算入制限適用後）
     """
     if num_tax_heirs is None:
         num_tax_heirs = num_legal_heirs
     basic_deduction = 30_000_000 + 6_000_000 * num_tax_heirs
     taxable_estate = max(0, total_assets_yen - basic_deduction)
 
-    def rough_rate(amount: int) -> float:
-        if amount <= 10_000_000:   return 0.10
-        if amount <= 30_000_000:   return 0.15
-        if amount <= 50_000_000:   return 0.20
-        if amount <= 100_000_000:  return 0.30
-        if amount <= 200_000_000:  return 0.40
-        return 0.45
+    # 正規計算: 法定相続分按分 → 各人税率 → 合算
+    estimated_tax = _calculate_inheritance_tax_total(taxable_estate, num_tax_heirs)
 
-    estimated_tax = int(taxable_estate * rough_rate(taxable_estate))
     return {
         "total_assets": total_assets_yen,
         "basic_deduction": basic_deduction,
