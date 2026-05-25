@@ -507,15 +507,8 @@ def _calculate_inheritance_tax_total(
     taxable_estate: int, num_legal_heirs: int
 ) -> int:
     """
-    相続税の総額を計算する（相続税法16条）。
-    1. 課税遺産総額を法定相続人が法定相続分で取得したと仮定して按分
-    2. 各人の取得分に速算表を適用して個別税額を算出
-    3. 合算して「相続税の総額」とする
-
-    ※ 簡略化のため、ここでは「配偶者+子N名」「子のみN名」等の
-       詳細按分は行わず、num_legal_heirs で均等按分の近似を使用。
-       配偶者がいる場合は配偶者1/2、残り1/2を子で均等が標準形のため、
-       実務上の概算としては許容範囲。
+    均等按分版（相続人がそれぞれ均等な相続分を持つケース：子のみ・兄弟のみ等）。
+    配偶者+子の標準パターンには _calculate_inheritance_tax_with_spouse_pattern を使うこと。
     """
     if taxable_estate <= 0 or num_legal_heirs <= 0:
         return 0
@@ -530,16 +523,41 @@ def _calculate_inheritance_tax_with_spouse_pattern(
     """
     配偶者+子の標準パターンで「相続税の総額」を正確に計算する。
     配偶者: 1/2、子: 残り1/2を均等按分（民法900条1号）。
+    num_children=0 の場合は配偶者のみ（全額相続）として扱う。
     """
     if taxable_estate <= 0:
         return 0
+    if num_children <= 0:
+        # 配偶者のみが相続人 → 配偶者が全額取得
+        return _inheritance_tax_per_bracket(taxable_estate)
     spouse_share = taxable_estate // 2
     spouse_tax = _inheritance_tax_per_bracket(spouse_share)
-    if num_children <= 0:
-        return spouse_tax
     child_share = (taxable_estate - spouse_share) // num_children
     child_tax = _inheritance_tax_per_bracket(child_share)
     return spouse_tax + child_tax * num_children
+
+
+def _calculate_total_tax_from_shares(
+    taxable_estate: int, shares: Dict[str, Fraction]
+) -> int:
+    """
+    任意の法定相続分（shares）に従って課税遺産を按分し、相続税の総額を算出する。
+    相続税法16条準拠: 法定相続分どおりに取得したと仮定 → 各人の税率適用 → 合算
+
+    これにより以下のすべてのパターンを正確に計算できる:
+    - 配偶者+子: 1/2 : 1/2÷N
+    - 配偶者+直系尊属: 2/3 : 1/3÷N
+    - 配偶者+兄弟姉妹: 3/4 : 1/4÷N（半血含む）
+    - 配偶者のみ: 1
+    - 子のみ・直系尊属のみ・兄弟のみ: 均等
+    """
+    if taxable_estate <= 0 or not shares:
+        return 0
+    total = 0
+    for _, frac in shares.items():
+        person_share = int(taxable_estate * float(frac))
+        total += _inheritance_tax_per_bracket(person_share)
+    return total
 
 
 def calculate_secondary_inheritance(
@@ -717,7 +735,16 @@ def compare_gift_strategies(
     annual_gift_tax = (
         _gift_tax_general(annual_excess_per_year) * years * num_recipients
     )
-    annual_inheritance_saved = int(total_gifted * estimated_marginal_rate)
+    # 注: 2024年改正により相続開始前7年以内の贈与は相続財産に持戻し対象
+    # （ただし4-7年前の贈与は合計100万円まで持戻し対象外）。
+    # 厳密には贈与開始年と相続発生年の関係で持戻し額が変動するが、
+    # 本シミュレーションでは「7年超前の贈与のみ節税効果あり」として概算する。
+    if years > 7:
+        effective_gifted = annual_amount_yen * (years - 7) * num_recipients
+    else:
+        # 全期間が持戻し対象の場合、効果はほぼゼロ（100万円控除のみ）
+        effective_gifted = max(0, total_gifted - 1_000_000 * num_recipients)
+    annual_inheritance_saved = int(effective_gifted * estimated_marginal_rate)
     annual_net = annual_inheritance_saved - annual_gift_tax
 
     # ── 相続時精算課税シナリオ ──────────────────────────────
@@ -844,8 +871,12 @@ def get_inheritance_tax_estimate(
     basic_deduction = 30_000_000 + 6_000_000 * num_tax_heirs
     taxable_estate = max(0, total_assets_yen - basic_deduction)
 
-    # 正規計算: 法定相続分按分 → 各人税率 → 合算
-    estimated_tax = _calculate_inheritance_tax_total(taxable_estate, num_tax_heirs)
+    # 正規計算: 実際の法定相続分（shares）に従って按分 → 各人税率 → 合算
+    # shares が空の場合（法定相続人なし）は均等按分にフォールバック
+    if shares:
+        estimated_tax = _calculate_total_tax_from_shares(taxable_estate, shares)
+    else:
+        estimated_tax = _calculate_inheritance_tax_total(taxable_estate, num_tax_heirs)
 
     return {
         "total_assets": total_assets_yen,

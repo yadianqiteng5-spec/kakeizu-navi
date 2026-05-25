@@ -122,7 +122,7 @@ def _sidebar():
         st.markdown(
             """<div style="background:#27AE60;color:white;padding:6px 10px;
             border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
-            ✅ <b>34ケース</b> 自動テスト済<br>
+            ✅ <b>39ケース</b> 自動テスト済<br>
             <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
             </div>""",
             unsafe_allow_html=True,
@@ -174,7 +174,7 @@ st.markdown(
     """<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;">
     <span style="background:#27AE60;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
-    ✅ 34ケース 自動テスト済</span>
+    ✅ 39ケース 自動テスト済</span>
     <span style="background:#2980B9;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
     ⚖️ 民法・相続税法準拠</span>
@@ -189,7 +189,7 @@ st.markdown(
 )
 
 # テスト済みケース詳細（折りたたみ）
-with st.expander("📋 テスト済みの法律ケース一覧（34ケース全通過）", expanded=False):
+with st.expander("📋 テスト済みの法律ケース一覧（39ケース全通過）", expanded=False):
     st.markdown("""
 | 分類 | ケース | 根拠条文 |
 |---|---|---|
@@ -825,7 +825,10 @@ elif st.session_state.step == 2:
             st.warning(
                 f"⚠️ **養子算入制限の適用**（相続税法15条2項）\n\n"
                 f"民法上の法定相続人は {num_heirs} 名ですが、相続税の基礎控除算定上は "
-                f"{num_tax_heirs} 名としてカウントされます。{tax_heir_info['note']}"
+                f"{num_tax_heirs} 名としてカウントされます。{tax_heir_info['note']}\n\n"
+                "📌 **正確には**「相続税の総額」計算でも税法上の法定相続人数（養子算入後）で再按分するため、"
+                "本シミュレーションの税額は **若干過少評価**となる可能性があります。"
+                "実際の税額は税理士による精密試算が必要です。"
             )
         elif tax_heir_info["note"] != "養子なし":
             st.info(f"ℹ️ {tax_heir_info['note']}")
@@ -1107,7 +1110,7 @@ elif st.session_state.step == 2:
 
 | 該当事例 | 注意点 |
 |---|---|
-| 被相続人または相続人に**外国籍の方**がいる | 法の適用に関する通則法36条により、被相続人の本国法が適用される可能性 |
+| 被相続人が**外国籍**または相続人に外国籍の方がいる | 法の適用に関する通則法36条により、被相続人の本国法が準拠法となる場合あり（日本国籍なら原則日本法） |
 | **海外に資産**（不動産・銀行口座・証券）がある | 現地法に基づくプロベート手続（米英）等が必要になる場合あり |
 | 相続人が**海外に居住**（日本に住所なし） | 制限納税義務者として日本国内財産のみ課税の場合あり（相続税法1条の3） |
 | 被相続人が**過去10年以内に海外居住歴**あり | 国外財産も日本の相続税課税対象となる場合あり |
@@ -1480,7 +1483,7 @@ elif st.session_state.step == 2:
         """<div style="background:#F4F6F7;border-left:4px solid #1ABC9C;
         padding:18px 20px;border-radius:6px;">
         <p style="margin:0 0 10px 0;font-size:14px;line-height:1.8;">
-        本アプリは <b>34ケースの自動テスト</b>（民法・相続税法のエッジケース）と
+        本アプリは <b>39ケースの自動テスト</b>（民法・相続税法のエッジケース）と
         <b>国税庁公表の相続税速算表</b>に基づいて計算ロジックを実装しており、
         シンプルなケースでは国税庁シミュレーターと一致する精度で算出しています。
         </p>
@@ -1505,7 +1508,7 @@ elif st.session_state.step == 2:
             </a>
             <span style="background:#27AE60;color:white;padding:8px 16px;
                   border-radius:6px;font-weight:bold;font-size:13px;">
-               ✅ 34ケース自動テスト済
+               ✅ 39ケース自動テスト済
             </span>
         </div>
         </div>""",
@@ -1513,5 +1516,5 @@ elif st.session_state.step == 2:
     )
     st.caption(
         "💡 計算ロジックは `core/inheritance.py` に集約され、`tests/test_inheritance.py` で"
-        "検証可能です。`python -X utf8 tests/test_inheritance.py` で34ケースのテストを再現できます。"
+        "検証可能です。`python -X utf8 tests/test_inheritance.py` で39ケースのテストを再現できます。"
     )
