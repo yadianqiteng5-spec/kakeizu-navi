@@ -17,6 +17,37 @@ MAX_FILE_MB = 5
 MAX_LLM_CALLS = 8
 
 
+# ── OGPメタタグ注入（SNSシェア時のプレビュー用） ─────────────────────────────
+_OGP_TITLE = "家系図Navi｜相続・事業承継シミュレーター"
+_OGP_DESC = "家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが診断。ゼロ・リテンション設計でデータは一切保存されません。"
+_OGP_URL = "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/"
+st.markdown(
+    f"""<script>
+    (function() {{
+        const head = window.parent.document.head;
+        const metas = [
+            ['og:title', '{_OGP_TITLE}'],
+            ['og:description', '{_OGP_DESC}'],
+            ['og:url', '{_OGP_URL}'],
+            ['og:type', 'website'],
+            ['twitter:card', 'summary_large_image'],
+            ['twitter:title', '{_OGP_TITLE}'],
+            ['twitter:description', '{_OGP_DESC}'],
+        ];
+        metas.forEach(([prop, content]) => {{
+            if (head.querySelector(`meta[property="${{prop}}"], meta[name="${{prop}}"]`)) return;
+            const m = document.createElement('meta');
+            if (prop.startsWith('og:')) m.setAttribute('property', prop);
+            else m.setAttribute('name', prop);
+            m.setAttribute('content', content);
+            head.appendChild(m);
+        }});
+    }})();
+    </script>""",
+    unsafe_allow_html=True,
+)
+
+
 # ── セッション初期化 ────────────────────────────────────────────────────────
 def _init_session():
     defaults = {
@@ -937,30 +968,45 @@ elif st.session_state.step == 2:
 
     st.divider()
 
-    # ── 3-9. CTAバナー広告 ────────────────────────────────────────────────────
+    # ── 3-9. CTAバナー広告（アフィリエイトリンク差し替え可能） ────────────────
     st.subheader("👨‍💼 次のステップ：専門家にご相談を")
+
+    # ▼ アフィリエイト URL（承認後にここを差し替えるだけ）
+    AFFILIATE_URL_TAX = "#"          # 例: 税理士ドットコム（A8.net 案件）
+    AFFILIATE_URL_BIZ = "#"          # 例: 事業承継・M&A仲介（A8.net 案件）
+
     b1, b2 = st.columns(2)
     with b1:
         st.markdown(
-            """<div style="background:linear-gradient(135deg,#667eea,#764ba2);
-            color:white;padding:20px;border-radius:12px;text-align:center;">
+            f"""<a href="{AFFILIATE_URL_TAX}" target="_blank" rel="noopener sponsored"
+            style="text-decoration:none;color:inherit;">
+            <div style="background:linear-gradient(135deg,#667eea,#764ba2);
+            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;">
             <b style="font-size:16px;">相続専門税理士に無料相談</b><br>
             <span style="font-size:13px;">診断結果を見せるだけでOK・全国対応</span><br><br>
             <span style="background:white;color:#667eea;padding:6px 20px;
                   border-radius:20px;font-weight:bold;font-size:13px;">
-            相談する →（広告プレースホルダー）</span>
-            </div>""",
+            相談する →
+            </span>
+            </div></a>""",
             unsafe_allow_html=True,
         )
     with b2:
         st.markdown(
-            """<div style="background:linear-gradient(135deg,#f093fb,#f5576c);
-            color:white;padding:20px;border-radius:12px;text-align:center;">
+            f"""<a href="{AFFILIATE_URL_BIZ}" target="_blank" rel="noopener sponsored"
+            style="text-decoration:none;color:inherit;">
+            <div style="background:linear-gradient(135deg,#f093fb,#f5576c);
+            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;">
             <b style="font-size:16px;">事業承継・M&A専門家に相談</b><br>
             <span style="font-size:13px;">後継者問題・自社株対策を無料診断</span><br><br>
             <span style="background:white;color:#f5576c;padding:6px 20px;
                   border-radius:20px;font-weight:bold;font-size:13px;">
-            診断を受ける →（広告プレースホルダー）</span>
-            </div>""",
+            診断を受ける →
+            </span>
+            </div></a>""",
             unsafe_allow_html=True,
         )
+    st.caption(
+        "※ 上記は広告枠です（アフィリエイトリンク差し替え予定）。"
+        "リンク先での申込・契約は各社の責任のもとで行われ、当サイトは仲介を行いません。"
+    )
