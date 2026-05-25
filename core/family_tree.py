@@ -131,13 +131,64 @@ class FamilyTree:
                 if r.rel_type == "parent_child" and r.person2_id == person_id]
 
     def get_siblings(self, person_id: str) -> List[str]:
-        parents = self.get_parents(person_id)
+        parents = self.get_legal_parents(person_id)
         siblings: set = set()
         for pid in parents:
-            for cid in self.get_children(pid):
+            for cid in self.get_legal_children(pid):
                 if cid != person_id:
                     siblings.add(cid)
         return list(siblings)
+
+    # ── 民法上の親族関係（特別養子縁組による断絶を考慮）─────────────────────
+    # 民法817条の9: 特別養子と実方の父母及びその血族との親族関係は終了する
+
+    def _has_special_adoption_parent(self, child_id: str) -> bool:
+        """この子に特別養子の養親が存在するか"""
+        return any(
+            r.rel_type == "parent_child" and r.person2_id == child_id
+            and getattr(r, "adoption_type", "biological") == "special_adoption"
+            for r in self.relationships
+        )
+
+    def get_legal_parents(self, person_id: str) -> List[str]:
+        """
+        民法上の親（相続権が発生する親）を返す。
+        - 特別養子の場合: 養親のみ（実親は除外）
+        - それ以外: すべての親（実親＋普通養子の養親）
+        """
+        if self._has_special_adoption_parent(person_id):
+            return [
+                r.person1_id for r in self.relationships
+                if r.rel_type == "parent_child" and r.person2_id == person_id
+                and getattr(r, "adoption_type", "biological") == "special_adoption"
+            ]
+        return self.get_parents(person_id)
+
+    def get_legal_children(self, person_id: str) -> List[str]:
+        """
+        民法上の子（相続権が発生する子）を返す。
+        - 実親としての関係でも、その子が他者に特別養子として迎えられた場合は除外
+        - 普通養子はそのまま含む
+        """
+        result: List[str] = []
+        for r in self.relationships:
+            if r.rel_type != "parent_child" or r.person1_id != person_id:
+                continue
+            child_id = r.person2_id
+            adoption = getattr(r, "adoption_type", "biological")
+
+            if adoption == "special_adoption":
+                # 自分が特別養子の養親 → 完全な親子関係
+                result.append(child_id)
+            elif adoption == "regular_adoption":
+                # 普通養子 → 親子関係あり（実親との関係も残存）
+                result.append(child_id)
+            else:
+                # 実親関係: その子が他者の特別養子になっていたら断絶
+                if not self._has_special_adoption_parent(child_id):
+                    result.append(child_id)
+                # else: 実子だが他者の特別養子 → 民法817条の9により断絶
+        return result
 
     def get_propositus(self) -> Optional[str]:
         for pid, p in self.persons.items():

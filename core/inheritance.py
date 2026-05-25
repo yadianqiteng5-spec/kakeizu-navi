@@ -7,6 +7,8 @@
 - 兄弟姉妹の一代限り代襲 — 甥姪まで（民法889条2項）
 - 半血兄弟姉妹 — 全血の1/2（民法900条4号但書）
 - 相続放棄 — 放棄者は枝ごと除外（代襲も発生しない）
+- 同時死亡推定 — 民法32条の2（互いに相続権なし、代襲は発生）
+- 特別養子縁組 — 民法817条の9（実方との親族関係は終了）
 """
 from fractions import Fraction
 from typing import Dict, List, Optional, Tuple
@@ -23,7 +25,7 @@ def _resolve_descendants(
     直系卑属に total_share を分配する（無限代襲対応）。
     放棄者は枝ごと除外（民法939条: 代襲も発生しない）。
     """
-    children = ft.get_children(ancestor_id)
+    children = ft.get_legal_children(ancestor_id)
     branches: List[Tuple[str, bool]] = []  # (child_id, is_living)
 
     for cid in children:
@@ -62,7 +64,7 @@ def _resolve_ascendants(ft, propositus_id: str) -> List[str]:
     直系尊属を取得（親等の近い者のみ）。
     親→祖父母→曾祖父母…と上に繰り上がる。
     """
-    current_generation: List[str] = list(ft.get_parents(propositus_id))
+    current_generation: List[str] = list(ft.get_legal_parents(propositus_id))
     visited: set = set()
 
     while current_generation:
@@ -81,7 +83,7 @@ def _resolve_ascendants(ft, propositus_id: str) -> List[str]:
                 continue
             visited.add(pid)
             if pid in ft.persons:
-                next_generation.extend(ft.get_parents(pid))
+                next_generation.extend(ft.get_legal_parents(pid))
 
         if not next_generation:
             return []
@@ -98,7 +100,7 @@ def _resolve_siblings(
     Returns: (shares_dict, labels_dict)
     """
     siblings = ft.get_siblings(propositus_id)
-    propositus_parents = set(ft.get_parents(propositus_id))
+    propositus_parents = set(ft.get_legal_parents(propositus_id))
 
     info = []  # (sib_id, is_full_blood, is_alive, niece_ids)
     for sid in siblings:
@@ -108,7 +110,7 @@ def _resolve_siblings(
         if s.is_renounced:
             continue
 
-        s_parents = set(ft.get_parents(sid))
+        s_parents = set(ft.get_legal_parents(sid))
         common = propositus_parents & s_parents
         # 被相続人の親が2人登録されている場合のみ全血判定が可能
         # 共有親が2以上なら全血、1なら半血
@@ -120,9 +122,9 @@ def _resolve_siblings(
         if s.is_alive:
             info.append((sid, is_full_blood, True, None))
         else:
-            # 兄弟姉妹の代襲は一代限り（甥姪まで）
+            # 兄弟姉妹の代襲は一代限り（甥姪まで・民法889条2項）
             nieces = [
-                n for n in ft.get_children(sid)
+                n for n in ft.get_legal_children(sid)
                 if n in ft.persons and ft.persons[n].is_alive
                 and not ft.persons[n].is_renounced
             ]
@@ -193,7 +195,7 @@ def calculate_legal_shares(
             shares[spouse_id] = Fraction(1, 2)
             lines.append(f"配偶者 **{ft.persons[spouse_id].name}**: 1/2")
 
-        direct_children = set(ft.get_children(propositus_id))
+        direct_children = set(ft.get_legal_children(propositus_id))
         for hid, share in descendant_shares.items():
             shares[hid] = share
             name = ft.persons[hid].name
@@ -215,7 +217,7 @@ def calculate_legal_shares(
         parents_alive = any(
             p in ft.persons and ft.persons[p].is_alive
             and not ft.persons[p].is_renounced
-            for p in ft.get_parents(propositus_id)
+            for p in ft.get_legal_parents(propositus_id)
         )
         level_label = "" if parents_alive else "（祖父母世代に繰上）"
 
@@ -314,7 +316,7 @@ def get_business_risks(family_tree, propositus_id: str) -> List[str]:
     spouse_id = ft.get_spouse(propositus_id)
     if spouse_id and spouse_id in shares:
         spouse_share = float(shares[spouse_id])
-        if spouse_share >= 0.5 and ft.get_children(propositus_id):
+        if spouse_share >= 0.5 and ft.get_legal_children(propositus_id):
             risks.append(
                 "⚠️ **配偶者への株式集中**: 配偶者が50%以上の株式を相続すると、"
                 "後継者（子）の経営権が不安定になるリスクがあります。後継者への集中策を検討してください。"
@@ -388,7 +390,7 @@ def calculate_legitimes(family_tree, propositus_id: str) -> dict:
     siblings = set(ft.get_siblings(propositus_id))
     niece_nephew = set()
     for sid in siblings:
-        for nid in ft.get_children(sid):
+        for nid in ft.get_legal_children(sid):
             niece_nephew.add(nid)
 
     individual: dict = {}
@@ -426,7 +428,7 @@ def count_tax_legal_heirs(family_tree, propositus_id: str) -> dict:
     ft = family_tree
     shares, _ = calculate_legal_shares(ft, propositus_id)
 
-    direct_child_ids = set(ft.get_children(propositus_id))
+    direct_child_ids = set(ft.get_legal_children(propositus_id))
 
     bio_children_in_heirs = 0
     adopted_children_in_heirs = 0
