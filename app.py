@@ -3,15 +3,136 @@
 ゼロ・リテンションアーキテクチャ: データはセッション内のみ、サーバーへの保存なし
 """
 import streamlit as st
+import base64
+import os
 from io import BytesIO
+from pathlib import Path
+
+# ── アイコン読み込み（PIL Image オブジェクトとして page_icon に渡す）───────
+_ICON_DIR = Path(__file__).parent / "static"
+_ICON_SVG_PATH = _ICON_DIR / "icon.svg"
+_ICON_MASKABLE_PATH = _ICON_DIR / "icon_maskable.svg"
+
+
+def _load_icon_for_page():
+    """ファビコン用にPIL Imageを返す（SVGをPNGにレンダリング、失敗時は絵文字）"""
+    try:
+        from PIL import Image
+        png_path = _ICON_DIR / "icon.png"
+        if png_path.exists():
+            return Image.open(png_path)
+    except Exception:
+        pass
+    # フォールバック: 絵文字
+    return "🌳"
+
 
 # ── ページ設定 ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="家系図Navi｜相続・事業承継シミュレーター",
-    page_icon="🌳",
+    page_icon=_load_icon_for_page(),
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# ── PWAアイコン & manifest 注入（デスクトップにインストール時に反映） ────
+def _inject_pwa_assets():
+    """SVGアイコンをbase64で埋め込み、PWA manifestを動的生成して<head>に挿入"""
+    try:
+        if not _ICON_SVG_PATH.exists():
+            return
+        svg_data = _ICON_SVG_PATH.read_text(encoding="utf-8")
+        svg_b64 = base64.b64encode(svg_data.encode("utf-8")).decode("ascii")
+        svg_uri = f"data:image/svg+xml;base64,{svg_b64}"
+
+        maskable_data = (
+            _ICON_MASKABLE_PATH.read_text(encoding="utf-8")
+            if _ICON_MASKABLE_PATH.exists() else svg_data
+        )
+        maskable_b64 = base64.b64encode(maskable_data.encode("utf-8")).decode("ascii")
+        maskable_uri = f"data:image/svg+xml;base64,{maskable_b64}"
+
+        # PNGアイコンも data URI で埋め込み（PWA互換性のため）
+        png_icons = []
+        for size_label, fname in [("192x192", "icon_192.png"), ("512x512", "icon_512.png")]:
+            png_path = _ICON_DIR / fname
+            if png_path.exists():
+                png_b64 = base64.b64encode(png_path.read_bytes()).decode("ascii")
+                png_icons.append({
+                    "src": f"data:image/png;base64,{png_b64}",
+                    "sizes": size_label,
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                })
+
+        # PWA manifest を data URI として生成
+        import json as _json
+        manifest = {
+            "name": "家系図Navi",
+            "short_name": "家系図Navi",
+            "description": "相続・事業承継シミュレーター",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#27AE60",
+            "theme_color": "#16A085",
+            "icons": png_icons + [
+                {"src": svg_uri, "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+                {"src": maskable_uri, "sizes": "any", "type": "image/svg+xml", "purpose": "maskable"},
+            ],
+        }
+        manifest_b64 = base64.b64encode(
+            _json.dumps(manifest, ensure_ascii=False).encode("utf-8")
+        ).decode("ascii")
+        manifest_uri = f"data:application/manifest+json;base64,{manifest_b64}"
+
+        # JSスコープに渡すPNG URI（最初の2つを利用）
+        png_uri_192 = png_icons[0]["src"] if len(png_icons) >= 1 else svg_uri
+        png_uri_512 = png_icons[1]["src"] if len(png_icons) >= 2 else svg_uri
+        icon_uri = png_uri_192
+        apple_uri = png_uri_512
+        icon_type = "image/png" if png_icons else "image/svg+xml"
+
+        st.markdown(
+            f"""<script>
+            (function() {{
+                const head = window.parent.document.head;
+                const links = [
+                    ['icon',             '{icon_uri}',     '{icon_type}'],
+                    ['apple-touch-icon', '{apple_uri}',    '{icon_type}'],
+                    ['shortcut icon',    '{icon_uri}',     '{icon_type}'],
+                    ['manifest',         '{manifest_uri}', 'application/manifest+json'],
+                ];
+                links.forEach(([rel, href, type]) => {{
+                    // 既存の同名linkを削除して新規挿入
+                    head.querySelectorAll(`link[rel="${{rel}}"]`).forEach(el => el.remove());
+                    const link = document.createElement('link');
+                    link.setAttribute('rel', rel);
+                    link.setAttribute('href', href);
+                    if (type) link.setAttribute('type', type);
+                    head.appendChild(link);
+                }});
+                // テーマカラー
+                head.querySelectorAll('meta[name="theme-color"]').forEach(el => el.remove());
+                const tc = document.createElement('meta');
+                tc.setAttribute('name', 'theme-color');
+                tc.setAttribute('content', '#16A085');
+                head.appendChild(tc);
+                // apple-mobile-web-app-title (iOSホーム画面表示名)
+                head.querySelectorAll('meta[name="apple-mobile-web-app-title"]').forEach(el => el.remove());
+                const title = document.createElement('meta');
+                title.setAttribute('name', 'apple-mobile-web-app-title');
+                title.setAttribute('content', '家系図Navi');
+                head.appendChild(title);
+            }})();
+            </script>""",
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
+
+_inject_pwa_assets()
 
 MAX_FILE_MB = 5
 MAX_LLM_CALLS = 8
@@ -1200,9 +1321,28 @@ elif st.session_state.step == 2:
             st.markdown("#### 📋 診断結果")
             from core.legal_safety import safety_badge
             st.markdown(safety_badge(), unsafe_allow_html=True)
+
+            # ── AI出力クロスバリデーション（ハルシネーション検知）─────
+            from core.ai_validation import (
+                validate_ai_output, cross_check_tax_amount, format_validation_badge
+            )
+            val_result = validate_ai_output(diagnosis)
+            badge = format_validation_badge(val_result)
+            if badge:
+                st.markdown(badge, unsafe_allow_html=True)
+
+            # 税額が言及されていたら自社計算値と照合
+            if st.session_state.total_assets > 0:
+                calc_tax = tax["estimated_tax"] if "tax" in dir() else 0
+                if calc_tax > 0:
+                    discrepancy = cross_check_tax_amount(diagnosis, calc_tax)
+                    if discrepancy:
+                        st.warning(discrepancy)
+
             st.markdown(diagnosis)
             st.caption(
                 "※ AI診断は参考情報です。最終判断は必ず弁護士・税理士等の専門家にご相談ください。"
+                "AI出力は自社計算ロジック・既知の事実DBと照合済みです。"
             )
 
     st.divider()
@@ -1290,7 +1430,12 @@ elif st.session_state.step == 2:
                 st.session_state.llm_count += 1
 
                 from core.legal_safety import safety_badge
+                from core.ai_validation import validate_ai_output, format_validation_badge
                 st.markdown(safety_badge(), unsafe_allow_html=True)
+                draft_val = validate_ai_output(draft)
+                draft_badge = format_validation_badge(draft_val)
+                if draft_badge:
+                    st.markdown(draft_badge, unsafe_allow_html=True)
                 st.markdown(draft)
                 st.download_button(
                     "📥 雛形をテキストファイルでダウンロード",

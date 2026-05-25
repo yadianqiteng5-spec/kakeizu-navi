@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# 家系図Navi pre-commit hook
+# コミット前に法律・税額計算の精度検証を強制実行する
+#
+# 有効化: git config core.hooksPath .githooks
+
+set -e
+
+echo "🔍 家系図Navi: コミット前精度検証を実行..."
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Python実行コマンドを自動検出
+PYTHON=""
+for cmd in python python3 py; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        PYTHON="$cmd"
+        break
+    fi
+done
+if [ -z "$PYTHON" ]; then
+    echo "❌ Python が見つかりません。コミットを中止します。"
+    exit 1
+fi
+
+# 1. 構文チェック
+echo "  ▶ 構文チェック..."
+"$PYTHON" -m compileall -q core/ tests/ app.py || {
+    echo "❌ Python構文エラーが検出されました。"
+    exit 1
+}
+
+# 2. 単体テスト（民法・税法エッジケース）
+echo "  ▶ 単体テスト実行中..."
+"$PYTHON" -X utf8 tests/test_inheritance.py > /tmp/test_inheritance.log 2>&1 || {
+    echo "❌ 単体テスト失敗。ログ:"
+    tail -20 /tmp/test_inheritance.log
+    exit 1
+}
+TAIL=$(tail -1 /tmp/test_inheritance.log)
+echo "    $TAIL"
+
+# 3. 精度リグレッションテスト（国税庁公表値）
+echo "  ▶ 国税庁公表値リグレッション検証中..."
+"$PYTHON" -X utf8 tests/test_precision_regression.py > /tmp/test_precision.log 2>&1 || {
+    echo "❌ 精度リグレッション失敗! 計算ロジックが国税庁公表値とズレています:"
+    tail -30 /tmp/test_precision.log
+    echo ""
+    echo "🚫 コミットを中止しました。"
+    echo "   修正してから再度コミットしてください。"
+    exit 1
+}
+echo "    ✅ 国税庁公表値と一致"
+
+echo ""
+echo "✅ 全ての精度検証に合格しました。コミットを続行します。"
+exit 0
