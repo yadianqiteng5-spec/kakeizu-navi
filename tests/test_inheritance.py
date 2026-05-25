@@ -339,6 +339,82 @@ def test_legitime_spouse_and_child_half():
     assert info["individual"][ids["子"]] == Fraction(1, 4)
 
 
+# ─────────────────────────────────────────────────────────────────
+# シナリオビルダーのスモークテスト
+# ─────────────────────────────────────────────────────────────────
+
+def test_all_scenarios_build_and_compute():
+    """全8シナリオがエラーなく構築でき、相続人が1名以上算出される"""
+    scenarios = [
+        "standard", "no_children", "siblings_only", "half_blood",
+        "adoption", "special_adoption", "simultaneous_death", "renounce",
+    ]
+    for sid in scenarios:
+        ft = FamilyTree.create_scenario(sid)
+        prop = ft.get_propositus()
+        assert prop is not None, f"{sid}: 被相続人が設定されていない"
+        shares, _ = calculate_legal_shares(ft, prop)
+        # renounce シナリオは1名だけ残る、その他は2名以上
+        assert len(shares) >= 1, f"{sid}: 相続人が算出されない"
+
+
+def test_scenario_special_adoption_severs_bio_parent():
+    """特別養子シナリオでは実親（参考表示）は相続人に含まれない"""
+    ft = FamilyTree.create_scenario("special_adoption")
+    prop = ft.get_propositus()
+    shares, _ = calculate_legal_shares(ft, prop)
+    # 養親側の被相続人から見て、配偶者(妻)+特別養子の2名のみ
+    assert len(shares) == 2
+
+
+def test_scenario_renounce_no_representation():
+    """放棄シナリオで放棄者の子（孫）が代襲しない"""
+    ft = FamilyTree.create_scenario("renounce")
+    prop = ft.get_propositus()
+    shares, _ = calculate_legal_shares(ft, prop)
+    # 妻も放棄、長男も放棄 → 次男のみ
+    heir_names = [ft.persons[hid].name for hid in shares]
+    assert "次男" in heir_names
+    assert "孫（長男の子）" not in heir_names
+
+
+# ─────────────────────────────────────────────────────────────────
+# 小規模宅地等の特例
+# ─────────────────────────────────────────────────────────────────
+
+def test_small_residential_under_limit():
+    """200㎡（上限330㎡以下）の特定居住用宅地 → 全面積に80%減額"""
+    from core.inheritance import calculate_small_residential_deduction
+    r = calculate_small_residential_deduction("residential", 50_000_000, 200.0)
+    assert r["applicable"]
+    assert r["reduced_amount"] == 40_000_000  # 5000万 × 80%
+    assert r["after_deduction"] == 10_000_000
+
+
+def test_small_residential_over_limit():
+    """500㎡（上限超） → 330/500 のみに80%減額（按分）"""
+    from core.inheritance import calculate_small_residential_deduction
+    r = calculate_small_residential_deduction("residential", 50_000_000, 500.0)
+    assert r["applicable"]
+    # 5000万 × (330/500) × 80% = 2640万
+    assert r["reduced_amount"] == 26_400_000
+
+
+def test_small_residential_rental_50pct():
+    """貸付事業用は50%減額・上限200㎡"""
+    from core.inheritance import calculate_small_residential_deduction
+    r = calculate_small_residential_deduction("rental", 20_000_000, 100.0)
+    assert r["reduced_amount"] == 10_000_000  # 2000万 × 50%
+
+
+def test_small_residential_none():
+    """none を渡したら applicable=False"""
+    from core.inheritance import calculate_small_residential_deduction
+    r = calculate_small_residential_deduction("none", 10_000_000, 100.0)
+    assert not r["applicable"]
+    assert r["after_deduction"] == 10_000_000
+
+
 if __name__ == "__main__":
     # pytest なしで直接実行できるよう簡易ランナー
     import traceback

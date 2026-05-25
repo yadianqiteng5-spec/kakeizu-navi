@@ -296,6 +296,168 @@ class FamilyTree:
 
     # ── デモデータ ────────────────────────────────────────
 
+    # ── デモシナリオ集（典型事例） ────────────────────────────────
+
+    @classmethod
+    def create_scenario(cls, scenario_id: str) -> "FamilyTree":
+        """
+        シナリオIDから典型事例を生成する。
+        scenario_id: "standard" / "no_children" / "siblings_only" /
+                     "half_blood" / "adoption" / "special_adoption" /
+                     "simultaneous_death" / "renounce"
+        """
+        builders = {
+            "standard":           cls._scenario_standard,
+            "no_children":        cls._scenario_no_children,
+            "siblings_only":      cls._scenario_siblings_only,
+            "half_blood":         cls._scenario_half_blood,
+            "adoption":           cls._scenario_adoption,
+            "special_adoption":   cls._scenario_special_adoption,
+            "simultaneous_death": cls._scenario_simultaneous_death,
+            "renounce":           cls._scenario_renounce,
+        }
+        return builders.get(scenario_id, cls.create_demo)()
+
+    @classmethod
+    def _scenario_standard(cls) -> "FamilyTree":
+        """標準: 配偶者+子3名（うち1名は先死亡→代襲）— 既存のデモ"""
+        return cls.create_demo()
+
+    @classmethod
+    def _scenario_no_children(cls) -> "FamilyTree":
+        """子なし夫婦+両親（直系尊属が相続人）"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人・夫", Gender.MALE, 1960, False, True, 60_000_000),
+            "w": ft.add_person("妻", Gender.FEMALE, 1962, True),
+            "p_f": ft.add_person("父", Gender.MALE, 1935, True),
+            "p_m": ft.add_person("母", Gender.FEMALE, 1938, True),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        ft.add_parent_child(ids["p_f"], ids["f"])
+        ft.add_parent_child(ids["p_m"], ids["f"])
+        return ft
+
+    @classmethod
+    def _scenario_siblings_only(cls) -> "FamilyTree":
+        """子なし・両親死亡 → 配偶者+兄弟姉妹（遺留分発生せず）"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人", Gender.MALE, 1955, False, True, 40_000_000),
+            "w": ft.add_person("妻", Gender.FEMALE, 1958, True),
+            "p_f": ft.add_person("父", Gender.MALE, 1925, False),
+            "p_m": ft.add_person("母", Gender.FEMALE, 1928, False),
+            "b1": ft.add_person("兄", Gender.MALE, 1953, True),
+            "b2": ft.add_person("妹", Gender.FEMALE, 1960, True),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        for p in (ids["p_f"], ids["p_m"]):
+            ft.add_parent_child(p, ids["f"])
+            ft.add_parent_child(p, ids["b1"])
+            ft.add_parent_child(p, ids["b2"])
+        return ft
+
+    @classmethod
+    def _scenario_half_blood(cls) -> "FamilyTree":
+        """半血兄弟あり: 全血1名+半血1名（全血2:半血1 で按分）"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人", Gender.MALE, 1950, False, True, 30_000_000,
+                               notes="独身・子なし"),
+            "p_f": ft.add_person("父", Gender.MALE, 1920, False),
+            "p_m1": ft.add_person("実母", Gender.FEMALE, 1925, False),
+            "p_m2": ft.add_person("継母", Gender.FEMALE, 1935, False),
+            "b1": ft.add_person("全血兄", Gender.MALE, 1948, True),
+            "b2": ft.add_person("半血弟", Gender.MALE, 1965, True, notes="父+継母の子"),
+        }
+        ft.add_parent_child(ids["p_f"], ids["f"])
+        ft.add_parent_child(ids["p_m1"], ids["f"])
+        ft.add_parent_child(ids["p_f"], ids["b1"])
+        ft.add_parent_child(ids["p_m1"], ids["b1"])
+        ft.add_parent_child(ids["p_f"], ids["b2"])
+        ft.add_parent_child(ids["p_m2"], ids["b2"])
+        return ft
+
+    @classmethod
+    def _scenario_adoption(cls) -> "FamilyTree":
+        """普通養子あり: 実子2+養子2（相続税法15条2項で養子は1名のみ算入）"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人", Gender.MALE, 1945, False, True, 100_000_000,
+                               has_business_shares=True),
+            "w": ft.add_person("妻", Gender.FEMALE, 1948, True),
+            "c1": ft.add_person("実子・長男", Gender.MALE, 1972, True),
+            "c2": ft.add_person("実子・長女", Gender.FEMALE, 1975, True),
+            "a1": ft.add_person("普通養子A", Gender.MALE, 1980, True,
+                                notes="婿養子・後継者候補"),
+            "a2": ft.add_person("普通養子B", Gender.FEMALE, 1985, True),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        ft.add_parent_child(ids["f"], ids["c1"], adoption_type="biological")
+        ft.add_parent_child(ids["f"], ids["c2"], adoption_type="biological")
+        ft.add_parent_child(ids["f"], ids["a1"], adoption_type="regular_adoption")
+        ft.add_parent_child(ids["f"], ids["a2"], adoption_type="regular_adoption")
+        return ft
+
+    @classmethod
+    def _scenario_special_adoption(cls) -> "FamilyTree":
+        """特別養子: 養親側からのみ相続（実親との関係は終了）"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人（養親）", Gender.MALE, 1950, False, True, 40_000_000),
+            "w": ft.add_person("妻（養親）", Gender.FEMALE, 1953, True),
+            "c": ft.add_person("特別養子", Gender.FEMALE, 2010, True,
+                               notes="幼少期に特別養子縁組"),
+            "rp": ft.add_person("実親（参考表示）", Gender.MALE, 1985, True,
+                                notes="特別養子で親族関係は終了"),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        ft.add_parent_child(ids["f"], ids["c"], adoption_type="special_adoption")
+        ft.add_parent_child(ids["w"], ids["c"], adoption_type="special_adoption")
+        ft.add_parent_child(ids["rp"], ids["c"], adoption_type="biological")
+        return ft
+
+    @classmethod
+    def _scenario_simultaneous_death(cls) -> "FamilyTree":
+        """同時死亡: 親子が事故で同時死亡 → 代襲が成立"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("祖父・被相続人", Gender.MALE, 1940, False, True, 80_000_000),
+            "w": ft.add_person("祖母", Gender.FEMALE, 1942, True),
+            "c1": ft.add_person("長男", Gender.MALE, 1968, True,
+                                died_simultaneously=True,
+                                notes="祖父と同時に交通事故で死亡"),
+            "c2": ft.add_person("次男", Gender.MALE, 1970, True),
+            "gc": ft.add_person("孫（長男の子）", Gender.MALE, 1995, True,
+                                notes="代襲相続人"),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        ft.add_parent_child(ids["f"], ids["c1"])
+        ft.add_parent_child(ids["f"], ids["c2"])
+        ft.add_parent_child(ids["c1"], ids["gc"])
+        return ft
+
+    @classmethod
+    def _scenario_renounce(cls) -> "FamilyTree":
+        """相続放棄: 長男が放棄 → 代襲は発生せず、他の子で按分"""
+        ft = cls()
+        ids = {
+            "f": ft.add_person("被相続人", Gender.MALE, 1950, False, True, 50_000_000,
+                               notes="多額の借金あり"),
+            "w": ft.add_person("妻", Gender.FEMALE, 1953, True, is_renounced=True,
+                               notes="債務超過のため放棄"),
+            "c1": ft.add_person("長男", Gender.MALE, 1975, True, is_renounced=True,
+                                notes="債務超過のため放棄"),
+            "c2": ft.add_person("次男", Gender.MALE, 1978, True),
+            "gc": ft.add_person("孫（長男の子）", Gender.MALE, 2005, True,
+                                notes="放棄者の子は代襲しない（民法939条）"),
+        }
+        ft.add_spouse(ids["f"], ids["w"])
+        ft.add_parent_child(ids["f"], ids["c1"])
+        ft.add_parent_child(ids["f"], ids["c2"])
+        ft.add_parent_child(ids["c1"], ids["gc"])
+        return ft
+
     @classmethod
     def create_demo(cls) -> "FamilyTree":
         """

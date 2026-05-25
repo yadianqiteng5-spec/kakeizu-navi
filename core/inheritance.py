@@ -474,6 +474,59 @@ def count_tax_legal_heirs(family_tree, propositus_id: str) -> dict:
     }
 
 
+def calculate_small_residential_deduction(
+    land_type: str,
+    land_value_yen: int,
+    area_sqm: float,
+) -> dict:
+    """
+    小規模宅地等の特例（租税特別措置法69条の4）の減額を概算する。
+
+    Args:
+        land_type: "residential"（特定居住用）/ "business"（特定事業用）/
+                   "rental"（貸付事業用）/ "none"（適用なし）
+        land_value_yen: 宅地の相続税評価額（円）
+        area_sqm: 宅地の面積（㎡）
+
+    Returns:
+        {
+          "applicable": bool,
+          "limit_sqm": float,        # 適用面積の上限
+          "reduction_rate": float,   # 減額割合
+          "reduced_amount": int,     # 減額される金額
+          "after_deduction": int,    # 特例適用後の評価額
+          "rule": str,               # 適用ルール説明
+        }
+    """
+    config = {
+        "residential": (330.0, 0.80, "特定居住用宅地等: 330㎡まで80%減額"),
+        "business":    (400.0, 0.80, "特定事業用宅地等: 400㎡まで80%減額"),
+        "rental":      (200.0, 0.50, "貸付事業用宅地等: 200㎡まで50%減額"),
+    }
+    if land_type not in config or land_value_yen <= 0 or area_sqm <= 0:
+        return {
+            "applicable": False, "limit_sqm": 0.0, "reduction_rate": 0.0,
+            "reduced_amount": 0, "after_deduction": land_value_yen,
+            "rule": "適用なし",
+        }
+
+    limit_sqm, rate, rule = config[land_type]
+    # 上限面積を超える部分には適用しない
+    eligible_ratio = min(area_sqm, limit_sqm) / area_sqm
+    eligible_value = land_value_yen * eligible_ratio
+    reduced = int(eligible_value * rate)
+    after = land_value_yen - reduced
+
+    return {
+        "applicable": True,
+        "limit_sqm": limit_sqm,
+        "reduction_rate": rate,
+        "reduced_amount": reduced,
+        "after_deduction": after,
+        "rule": rule,
+    }
+
+
 def get_inheritance_tax_estimate(
     shares: Dict[str, Fraction],
     total_assets_yen: int,

@@ -122,7 +122,7 @@ def _sidebar():
         st.markdown(
             """<div style="background:#27AE60;color:white;padding:6px 10px;
             border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
-            ✅ <b>16ケース</b> 自動テスト済<br>
+            ✅ <b>23ケース</b> 自動テスト済<br>
             <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
             </div>""",
             unsafe_allow_html=True,
@@ -174,7 +174,7 @@ st.markdown(
     """<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;">
     <span style="background:#27AE60;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
-    ✅ 16ケース 自動テスト済</span>
+    ✅ 23ケース 自動テスト済</span>
     <span style="background:#2980B9;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
     ⚖️ 民法・相続税法準拠</span>
@@ -189,7 +189,7 @@ st.markdown(
 )
 
 # テスト済みケース詳細（折りたたみ）
-with st.expander("📋 テスト済みの法律ケース一覧（16ケース全通過）", expanded=False):
+with st.expander("📋 テスト済みの法律ケース一覧（23ケース全通過）", expanded=False):
     st.markdown("""
 | 分類 | ケース | 根拠条文 |
 |---|---|---|
@@ -387,7 +387,7 @@ if st.session_state.step == 0:
                     )
 
     st.markdown("")
-    c1, c2, c3 = st.columns([2, 2, 4])
+    c1, c2 = st.columns([1, 1])
     with c1:
         analyze_btn = st.button(
             "🔍 AIで解析する",
@@ -396,18 +396,38 @@ if st.session_state.step == 0:
             disabled=remaining_calls <= 0,
         )
     with c2:
-        demo_btn = st.button("📊 デモデータで体験", use_container_width=True)
-    with c3:
         if remaining_calls <= 0:
             st.error(f"本セッションのAI解析上限（{MAX_LLM_CALLS}回）に達しました。ページをリロードしてください。")
 
-    # ── デモボタン ─────────────────────────────────────────────────────────
-    if demo_btn:
-        from core.family_tree import FamilyTree
-        st.session_state.family_tree = FamilyTree.create_demo()
-        st.session_state.total_assets = 50_000_000
-        st.session_state.step = 2
-        st.rerun()
+    # ── 典型事例集（ワンクリック体験） ─────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 📚 典型事例集 — ワンクリックで体験")
+    st.caption("実際の相続でよくある8つのパターン。AIキー不要で全機能を試せます。")
+
+    SCENARIOS = [
+        ("standard",           "👨‍👩‍👧‍👦 標準ケース",       "配偶者+子3名（うち1名先死亡で代襲）", 50_000_000),
+        ("no_children",        "💑 子なし夫婦",            "配偶者+両親（直系尊属が相続）",         60_000_000),
+        ("siblings_only",      "👫 子なし・親も他界",        "配偶者+兄弟姉妹（遺留分発生せず）",     40_000_000),
+        ("half_blood",         "🧬 半血兄弟あり",           "全血:半血 = 2:1 で按分",            30_000_000),
+        ("adoption",           "📜 普通養子あり",           "実子2+養子2（養子算入制限が発動）",    100_000_000),
+        ("special_adoption",   "🎗 特別養子",              "実親との関係終了・養親からのみ相続",    40_000_000),
+        ("simultaneous_death", "⚡ 同時死亡（事故）",         "親子同時死亡 → 孫が代襲",            80_000_000),
+        ("renounce",           "🚫 相続放棄",              "債務超過で配偶者+長男が放棄",          50_000_000),
+    ]
+    sc_cols = st.columns(4)
+    for i, (sid, label, desc, assets) in enumerate(SCENARIOS):
+        with sc_cols[i % 4]:
+            if st.button(
+                f"**{label}**\n\n_{desc}_",
+                key=f"scenario_{sid}",
+                use_container_width=True,
+                help=f"相続財産: {assets//10000:,}万円のシナリオで体験",
+            ):
+                from core.family_tree import FamilyTree
+                st.session_state.family_tree = FamilyTree.create_scenario(sid)
+                st.session_state.total_assets = assets
+                st.session_state.step = 2
+                st.rerun()
 
     # ── AI解析ボタン（Step 3: 実API呼び出し）──────────────────────────────
     if analyze_btn:
@@ -808,9 +828,120 @@ elif st.session_state.step == 2:
             st.info(f"ℹ️ {tax_heir_info['note']}")
 
         st.caption(
-            "※ 概算値です。実際は小規模宅地等の特例・配偶者控除・債務控除等により大きく異なります。"
+            "※ 概算値です。実際は配偶者控除・債務控除等により大きく異なります。"
             "必ず税理士にご相談ください。"
         )
+
+        # ── 3-3-b. 小規模宅地等の特例（任意入力で減額シミュレーション） ────
+        with st.expander("🏠 小規模宅地等の特例を試算する（任意）", expanded=False):
+            st.caption(
+                "被相続人の宅地を相続する場合、要件を満たせば**最大80%減額**できる特例です"
+                "（租税特別措置法69条の4）。簡易シミュレーションを行えます。"
+            )
+            sl_c1, sl_c2, sl_c3 = st.columns(3)
+            with sl_c1:
+                land_type = st.selectbox(
+                    "宅地区分",
+                    ["none", "residential", "business", "rental"],
+                    format_func=lambda x: {
+                        "none": "適用なし",
+                        "residential": "特定居住用（80%減・330㎡）",
+                        "business":    "特定事業用（80%減・400㎡）",
+                        "rental":      "貸付事業用（50%減・200㎡）",
+                    }[x],
+                    key="land_type",
+                )
+            with sl_c2:
+                land_value_man = st.number_input(
+                    "宅地の相続税評価額（万円）", min_value=0, value=0, step=100,
+                    key="land_value",
+                )
+            with sl_c3:
+                area_sqm = st.number_input(
+                    "宅地面積（㎡）", min_value=0.0, value=0.0, step=10.0,
+                    key="area_sqm",
+                )
+
+            if land_type != "none" and land_value_man > 0 and area_sqm > 0:
+                from core.inheritance import calculate_small_residential_deduction
+                ssd = calculate_small_residential_deduction(
+                    land_type, land_value_man * 10000, area_sqm
+                )
+                if ssd["applicable"]:
+                    rc1, rc2, rc3 = st.columns(3)
+                    rc1.metric("適用前の評価額", f"{land_value_man:,} 万円")
+                    rc2.metric(
+                        "減額される金額",
+                        f"-{ssd['reduced_amount']//10000:,} 万円",
+                        f"{int(ssd['reduction_rate']*100)}%減",
+                    )
+                    rc3.metric(
+                        "適用後の評価額",
+                        f"{ssd['after_deduction']//10000:,} 万円",
+                    )
+                    st.success(f"✅ {ssd['rule']}")
+                    # 相続税への影響を再計算
+                    new_total = max(
+                        0, st.session_state.total_assets - ssd["reduced_amount"]
+                    )
+                    new_tax = get_inheritance_tax_estimate(
+                        shares, new_total, num_heirs, num_tax_heirs
+                    )
+                    st.info(
+                        f"💡 **特例適用後の相続税概算**: "
+                        f"{new_tax['estimated_tax']//10000:,} 万円 "
+                        f"（適用前: {tax['estimated_tax']//10000:,} 万円、"
+                        f"**{(tax['estimated_tax']-new_tax['estimated_tax'])//10000:,} 万円**の節税）"
+                    )
+                    if area_sqm > ssd["limit_sqm"]:
+                        st.warning(
+                            f"⚠️ 宅地面積が上限（{ssd['limit_sqm']:.0f}㎡）を超えるため、"
+                            f"超過部分には特例が適用されません。"
+                        )
+            st.caption(
+                "※ 本特例には「相続開始前から居住・事業に使用」「相続後一定期間の継続利用」等の"
+                "厳格な要件があります。適用可否は必ず税理士に確認してください。"
+            )
+
+        st.divider()
+
+    # ── 3-3-c. 配偶者居住権の説明（2020年4月施行・民法1028条以下） ──────────
+    spouse_id_for_dwelling = ft.get_spouse(propositus_id)
+    if spouse_id_for_dwelling and spouse_id_for_dwelling in shares:
+        with st.expander("🏡 配偶者居住権について（民法1028条以下）", expanded=False):
+            st.markdown("""
+**配偶者居住権**は2020年4月施行の制度で、配偶者が自宅に住み続けながら
+他の財産も相続しやすくする選択肢として考えられます。
+
+#### 📌 制度の概要
+
+| 項目 | 内容 |
+|---|---|
+| **配偶者居住権**（民法1028条） | 配偶者が**終身**または**一定期間**、自宅に無償で居住できる権利 |
+| **配偶者短期居住権**（民法1037条） | 遺産分割完了まで（最低6か月）、無償で居住できる権利。自動的に発生 |
+| **取得方法** | 遺産分割協議／遺言書／家庭裁判所の審判 |
+| **登記** | 配偶者居住権は**登記が対抗要件**（所有者と共同申請） |
+
+#### 💡 メリット
+
+- 配偶者は**自宅に住み続けられる**まま、預貯金など他の財産も多く相続できる
+- 居住権は配偶者の**一身専属権**で譲渡不可 → 子（所有権者）への将来の承継が確定
+- 居住権の評価額は**所有権より低い**ため、配偶者の相続財産配分の負担が軽くなる
+
+#### ⚠️ 注意点
+
+- 居住建物の**所有権は別の相続人**（通常は子）が取得する構造
+- 配偶者死亡時に居住権は消滅 → 子が完全な所有権を取得（**二次相続対策**にも有効）
+- 評価方法は複雑（建物の耐用年数・配偶者の平均余命などから算定）
+
+#### 🎯 こんなケースで検討推奨
+
+- 自宅が遺産の大半を占め、配偶者が住居を確保したいケース
+- 配偶者と子の関係が良好でなく、所有権を分離したいケース
+- 二次相続（配偶者死亡時）の相続税負担を抑えたいケース
+
+> 個別事案での適否・評価額算定は、**必ず弁護士・税理士にご相談ください**。
+            """)
         st.divider()
 
     # ── 3-4. 事業承継リスクアラート ───────────────────────────────────────────
