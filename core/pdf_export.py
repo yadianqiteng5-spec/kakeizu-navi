@@ -173,6 +173,45 @@ def generate_pdf_report(
                             f"　　└ {gc.name}（{bg}代襲相続人）", s_body,
                         ))
 
+    # ── 1-2. 親子関係一覧（養子区分明示） ─────────────────────────────
+    adoption_rows = [["親", "子", "区分"]]
+    for r in family_tree.relationships:
+        if r.rel_type != "parent_child":
+            continue
+        p1 = family_tree.persons.get(r.person1_id)
+        p2 = family_tree.persons.get(r.person2_id)
+        if not p1 or not p2:
+            continue
+        adoption = getattr(r, "adoption_type", "biological")
+        adoption_label = {
+            "biological": "実子",
+            "regular_adoption": "普通養子",
+            "special_adoption": "特別養子（実方と断絶）",
+        }.get(adoption, "実子")
+        adoption_rows.append([p1.name, p2.name, adoption_label])
+
+    if len(adoption_rows) > 1:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph("<b>親子関係一覧</b>（養子区分）", s_body))
+        ad_tbl = Table(adoption_rows, colWidths=[45*mm, 45*mm, 60*mm])
+        ad_tbl.setStyle(TableStyle([
+            ("FONT", (0, 0), (-1, -1), font_name, 9),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#5D6D7E")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8F9FA")]),
+        ]))
+        story.append(ad_tbl)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            "※ 特別養子（民法817条の9）は実親との親族関係が法律上終了するため、"
+            "実親からの相続権はありません。",
+            s_caption,
+        ))
+
     # ── 2. 法定相続分 ─────────────────────────────────────────────────
     story.append(Paragraph("2. 法定相続分", s_heading))
 

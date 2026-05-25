@@ -119,6 +119,14 @@ def _build_ft_from_edit_state():
 def _sidebar():
     with st.sidebar:
         st.markdown("### 🌳 家系図Navi")
+        st.markdown(
+            """<div style="background:#27AE60;color:white;padding:6px 10px;
+            border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
+            ✅ <b>16ケース</b> 自動テスト済<br>
+            <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
+            </div>""",
+            unsafe_allow_html=True,
+        )
         st.progress(
             remaining_calls / MAX_LLM_CALLS,
             text=f"AI解析残り: **{remaining_calls}/{MAX_LLM_CALLS}** 回",
@@ -160,6 +168,45 @@ _sidebar()
 # ── ヘッダー ───────────────────────────────────────────────────────────────
 st.title("🌳 家系図Navi")
 st.markdown("**相続・事業承継シミュレーター** ｜ 家族構成を入力するだけで法定相続分と事業承継リスクを診断します。")
+
+# ── 信頼性バッジ（テスト済み法律ケース数） ───────────────────────────────
+st.markdown(
+    """<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;">
+    <span style="background:#27AE60;color:white;padding:4px 10px;border-radius:12px;
+                 font-size:11px;font-weight:bold;">
+    ✅ 16ケース 自動テスト済</span>
+    <span style="background:#2980B9;color:white;padding:4px 10px;border-radius:12px;
+                 font-size:11px;font-weight:bold;">
+    ⚖️ 民法・相続税法準拠</span>
+    <span style="background:#8E44AD;color:white;padding:4px 10px;border-radius:12px;
+                 font-size:11px;font-weight:bold;">
+    🔒 ゼロ・リテンション</span>
+    <span style="background:#E67E22;color:white;padding:4px 10px;border-radius:12px;
+                 font-size:11px;font-weight:bold;">
+    🤖 Claude + Gemini</span>
+    </div>""",
+    unsafe_allow_html=True,
+)
+
+# テスト済みケース詳細（折りたたみ）
+with st.expander("📋 テスト済みの法律ケース一覧（16ケース全通過）", expanded=False):
+    st.markdown("""
+| 分類 | ケース | 根拠条文 |
+|---|---|---|
+| 基本順位 | 配偶者+子、配偶者+直系尊属、配偶者+兄弟姉妹、配偶者のみ | 民法900条 |
+| 代襲相続 | 子の死亡→孫が無限代襲 | 民法887条2項 |
+| 代襲相続 | 兄弟の死亡→甥姪が代襲（一代限り） | 民法889条2項 |
+| 代襲相続 | 相続放棄者の子は代襲しない | 民法939条 |
+| 同時死亡 | 親子同時死亡時の相続権 + 代襲成立 | 民法32条の2 |
+| 半血兄弟 | 全血:半血 = 2:1 | 民法900条4号但書 |
+| 直系尊属繰上 | 両親死亡→祖父母へ繰上 | 民法889条1項 |
+| 特別養子 | 実親との親族関係終了（実親から相続不可） | 民法817条の9 |
+| 普通養子 | 実親・養親いずれからも相続可 | 民法809条 |
+| 遺留分 | 兄弟のみ→0、直系尊属のみ→1/3、配偶者+子→1/2 | 民法1042条 |
+| 相続税 | 養子算入制限（実子あり1名／なし2名） | 相続税法15条2項 |
+
+> ⚠️ 寄与分・特別受益・特別寄与料などは未対応です。該当事案は専門家にご相談ください。
+    """)
 
 # ── 免責事項・同意 ─────────────────────────────────────────────────────────
 with st.expander(
