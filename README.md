@@ -1,9 +1,19 @@
 # 🌳 家系図Navi｜相続・事業承継シミュレーター
 
+[![Tests](https://github.com/yadianqiteng5-spec/kakeizu-navi/actions/workflows/test.yml/badge.svg)](https://github.com/yadianqiteng5-spec/kakeizu-navi/actions/workflows/test.yml)
+[![Precision](https://img.shields.io/badge/精度検証-国税庁公表値と一致-brightgreen)](./tests/test_precision_regression.py)
+[![Tests Count](https://img.shields.io/badge/tests-60%20passing-brightgreen)](./tests)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.36%2B-FF4B4B)](https://streamlit.io/)
+[![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](#-ライセンス)
+[![AI](https://img.shields.io/badge/AI-Claude%20%2B%20Gemini-9B59B6)](#)
+[![Zero Retention](https://img.shields.io/badge/data-zero%20retention-1ABC9C)](#-プライバシーゼロリテンション設計)
+[![Legal Safety](https://img.shields.io/badge/弁護士法72条-配慮済-2C3E50)](./core/legal_safety.py)
+
 家族構成を入力するだけで法定相続分を計算し、事業承継リスクを診断するStreamlitアプリ。
 ○○Naviシリーズの第1弾。
 
-🔗 **Live**: [https://kakeizu-navi.streamlit.app](https://kakeizu-navi.streamlit.app)（公開後にURL更新）
+🔗 **Live**: [https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/](https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/)
 
 ---
 
@@ -124,6 +134,25 @@ streamlit run app.py
 ```
 
 ブラウザで http://localhost:8501 にアクセス。
+
+---
+
+## 🛡️ 品質保証の仕組み
+
+| 層 | 仕組み | タイミング |
+|---|---|---|
+| CI/CD | GitHub Actions（Python 3.11/3.12） | push/PR/月次cron |
+| 精度リグレッション | 国税庁公表値との厳密照合 | テスト時 |
+| pre-commit hook | `git config core.hooksPath .githooks` で有効化 | ローカルコミット時 |
+| AI出力検証 | `core/ai_validation.py` のクロスバリデーション | Gemini診断/遺言書生成時 |
+
+### 🔔 通知設定
+
+CI/デプロイの通知設定は [`NOTIFICATIONS.md`](./NOTIFICATIONS.md) を参照:
+- 📨 GitHubメール通知（標準・設定不要）
+- 💬 Slack/Discord通知（Webhook URLをSecrets登録するだけ）
+- 🚨 失敗時にIssue自動作成（`ci-failure` ラベル）
+- 🌐 Streamlit Cloud デプロイ通知
 
 ---
 
