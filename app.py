@@ -1096,6 +1096,37 @@ elif st.session_state.step == 2:
             st.warning(risk)
         st.divider()
 
+    # ── 3-4-b. 国際相続の警告 ────────────────────────────────────────────────
+    with st.expander("🌐 国際相続にご注意（外国籍配偶者・海外資産がある場合）", expanded=False):
+        st.warning(
+            "本シミュレーションは**日本国内法**に基づく計算です。以下に該当する場合、"
+            "外国の相続法・税制が併用適用される可能性があり、結果が**大きく異なります**。"
+        )
+        st.markdown("""
+#### ⚠️ 国際相続の可能性があるケース
+
+| 該当事例 | 注意点 |
+|---|---|
+| 被相続人または相続人に**外国籍の方**がいる | 法の適用に関する通則法36条により、被相続人の本国法が適用される可能性 |
+| **海外に資産**（不動産・銀行口座・証券）がある | 現地法に基づくプロベート手続（米英）等が必要になる場合あり |
+| 相続人が**海外に居住**（日本に住所なし） | 制限納税義務者として日本国内財産のみ課税の場合あり（相続税法1条の3） |
+| 被相続人が**過去10年以内に海外居住歴**あり | 国外財産も日本の相続税課税対象となる場合あり |
+| 米国に資産（株式・不動産等）がある | **米国遺産税**（連邦・州）が別途課税される可能性 |
+| 中国・韓国に不動産がある | 現地での名義変更手続き・税制が日本と大きく異なる |
+
+#### 🚨 必ず専門家にご相談を
+
+- **国際相続専門の弁護士**: 準拠法の判断、プロベート手続き、現地代理人の選定
+- **国際税務専門の税理士**: 二重課税防止条約、国外財産調書、国外転出時課税
+- **現地の専門家**との連携体制を持つ事務所が望ましい
+
+> 国際相続は手続きに**1年以上**かかるケースも珍しくありません。早めの相談が選択肢として考えられます。
+        """)
+        st.caption(
+            "本アプリは日本国内法を前提とした一般情報提供であり、国際相続については一切判断・助言を行いません。"
+        )
+    st.divider()
+
     # ── 3-5. 生命保険の非課税枠 ──────────────────────────────────────────────
     st.subheader("🛡️ 生命保険の非課税枠")
     # 生命保険の非課税枠も相続税法上の法定相続人数を使用
@@ -1311,6 +1342,53 @@ elif st.session_state.step == 2:
                 shares, st.session_state.total_assets, num_heirs, num_tax_heirs
             )
 
+        # ── PDFに新セクション情報を集約（セッション入力済みの場合のみ） ──
+        small_land_for_pdf = None
+        lt = st.session_state.get("land_type", "none")
+        lv = st.session_state.get("land_value", 0)
+        lar = st.session_state.get("area_sqm", 0.0)
+        if lt != "none" and lv > 0 and lar > 0:
+            from core.inheritance import calculate_small_residential_deduction
+            ssd = calculate_small_residential_deduction(lt, lv * 10000, lar)
+            if ssd["applicable"]:
+                ssd["before"] = lv * 10000
+                small_land_for_pdf = ssd
+
+        secondary_for_pdf = None
+        spouse_id_pdf = ft.get_spouse(propositus_id)
+        if spouse_id_pdf and spouse_id_pdf in shares and st.session_state.total_assets > 0:
+            from core.inheritance import calculate_secondary_inheritance
+            ch_count = sum(
+                1 for hid in shares
+                if hid in set(ft.get_legal_children(propositus_id))
+                and hid != spouse_id_pdf
+            )
+            if ch_count == 0:
+                ch_count = max(1, len(shares) - 1)
+            secondary_for_pdf = calculate_secondary_inheritance(
+                primary_total_yen=st.session_state.total_assets,
+                num_children=ch_count,
+                spouse_own_assets_yen=st.session_state.get("spouse_own_assets", 0) * 10000,
+            )
+
+        gift_for_pdf = None
+        ga = st.session_state.get("gift_annual", 0)
+        gy = st.session_state.get("gift_years", 0)
+        gr = st.session_state.get("gift_recipients", 0)
+        if ga > 0 and gy > 0 and gr > 0:
+            from core.inheritance import compare_gift_strategies
+            est_rate = 0.10
+            for threshold, rate in [(50_000_000, 0.20), (100_000_000, 0.30),
+                                    (200_000_000, 0.40), (300_000_000, 0.45)]:
+                if st.session_state.total_assets > threshold:
+                    est_rate = rate
+            gift_for_pdf = compare_gift_strategies(
+                annual_amount_yen=ga * 10000,
+                years=gy,
+                num_recipients=gr,
+                estimated_marginal_rate=est_rate,
+            )
+
         try:
             pdf_bytes = generate_pdf_report(
                 family_tree=ft,
@@ -1320,6 +1398,9 @@ elif st.session_state.step == 2:
                 tax_info=tax_for_pdf,
                 tax_heir_info=tax_heir_info,
                 legitime_info=legitime_info,
+                small_land_info=small_land_for_pdf,
+                secondary_info=secondary_for_pdf,
+                gift_info=gift_for_pdf,
             )
         except Exception as e:
             pdf_bytes = None
@@ -1389,4 +1470,48 @@ elif st.session_state.step == 2:
     st.caption(
         "※ 上記は広告枠です（アフィリエイトリンク差し替え予定）。"
         "リンク先での申込・契約は各社の責任のもとで行われ、当サイトは仲介を行いません。"
+    )
+
+    st.divider()
+
+    # ── 3-10. 専門家チェック歓迎 CTA ─────────────────────────────────────────
+    st.subheader("🤝 専門家の皆様へ — 計算ロジックの精査を歓迎します")
+    st.markdown(
+        """<div style="background:#F4F6F7;border-left:4px solid #1ABC9C;
+        padding:18px 20px;border-radius:6px;">
+        <p style="margin:0 0 10px 0;font-size:14px;line-height:1.8;">
+        本アプリは <b>34ケースの自動テスト</b>（民法・相続税法のエッジケース）と
+        <b>国税庁公表の相続税速算表</b>に基づいて計算ロジックを実装しており、
+        シンプルなケースでは国税庁シミュレーターと一致する精度で算出しています。
+        </p>
+        <p style="margin:0 0 10px 0;font-size:14px;line-height:1.8;">
+        <b>弁護士・税理士・司法書士の先生方へ</b>: 計算ロジックの誤り・改善点を
+        ご指摘いただける場合、GitHub Issues または下記より歓迎いたします。
+        本アプリは <b>弁護士法72条</b> に抵触しない設計（特定事案への法律事務を行わない一般情報提供）と
+        しており、専門家の皆様のお仕事を補完・促進するツールを目指しています。
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <a href="https://github.com/yadianqiteng5-spec/kakeizu-navi/issues"
+               target="_blank" rel="noopener"
+               style="background:#1ABC9C;color:white;padding:8px 16px;
+                      border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">
+               🐛 GitHub Issuesで指摘する
+            </a>
+            <a href="https://github.com/yadianqiteng5-spec/kakeizu-navi"
+               target="_blank" rel="noopener"
+               style="background:#34495E;color:white;padding:8px 16px;
+                      border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">
+               📂 ソースコードを見る
+            </a>
+            <span style="background:#27AE60;color:white;padding:8px 16px;
+                  border-radius:6px;font-weight:bold;font-size:13px;">
+               ✅ 34ケース自動テスト済
+            </span>
+        </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "💡 計算ロジックは `core/inheritance.py` に集約され、`tests/test_inheritance.py` で"
+        "検証可能です。`python -X utf8 tests/test_inheritance.py` で34ケースのテストを再現できます。"
     )

@@ -41,6 +41,9 @@ def generate_pdf_report(
     tax_info: Optional[dict] = None,
     tax_heir_info: Optional[dict] = None,
     legitime_info: Optional[dict] = None,
+    small_land_info: Optional[dict] = None,
+    secondary_info: Optional[dict] = None,
+    gift_info: Optional[dict] = None,
 ) -> Optional[bytes]:
     """
     相続シミュレーション結果の PDF を生成して bytes を返す。
@@ -334,9 +337,153 @@ def generate_pdf_report(
             ))
         story.append(Spacer(1, 4))
         story.append(Paragraph(
-            "※ 上記は概算値です。小規模宅地等の特例・配偶者控除・債務控除等により実際の税額は大きく異なります。",
+            "※ 計算方式: 相続税法16条準拠の正規計算（法定相続分按分→速算表適用→合算）。"
+            "国税庁公表の相続税速算表（8段階・速算控除額付き）を使用し、"
+            "シンプルなケースでは国税庁シミュレーターと一致する精度で算出しています。"
+            "ただし配偶者控除・小規模宅地等の特例・債務控除等の個別事情は反映されないため、"
+            "正確な税額は税理士による精密試算が必要です。",
             s_caption,
         ))
+
+    # ── 3-2. 小規模宅地等の特例 ──────────────────────────────────────
+    if small_land_info and small_land_info.get("applicable"):
+        story.append(Paragraph("3-2. 小規模宅地等の特例（租税特別措置法69条の4）", s_heading))
+        story.append(Paragraph(small_land_info["rule"], s_body))
+        sl_rows = [
+            ["項目", "金額・割合"],
+            ["減額前の評価額", f"¥{small_land_info.get('before', 0):,}"],
+            ["減額割合",       f"{int(small_land_info['reduction_rate']*100)}%"],
+            ["減額金額",       f"-¥{small_land_info['reduced_amount']:,}"],
+            ["減額後の評価額",  f"¥{small_land_info['after_deduction']:,}"],
+        ]
+        sl_tbl = Table(sl_rows, colWidths=[75*mm, 75*mm])
+        sl_tbl.setStyle(TableStyle([
+            ("FONT", (0, 0), (-1, -1), font_name, 10),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16A085")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (1, 0), (1, 0), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        story.append(sl_tbl)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            "※ 本特例には「相続開始前から居住・事業に使用」「相続後一定期間の継続利用」等の"
+            "厳格な要件があります。適用可否は必ず税理士に確認してください。",
+            s_caption,
+        ))
+
+    # ── 3-3. 二次相続シミュレーション ────────────────────────────────
+    if secondary_info and secondary_info.get("scenarios"):
+        story.append(Paragraph("3-3. 二次相続シミュレーション（相続税法19条の2）", s_heading))
+        story.append(Paragraph(
+            "配偶者が遺産を多く相続すると一次相続税は軽減されますが、"
+            "配偶者死亡時（二次相続）の税負担が大きくなります。下記は配偶者取得割合別の比較です。",
+            s_body,
+        ))
+        sec_rows = [["シナリオ", "配偶者取得額", "一次相続税", "二次相続税", "合計税額"]]
+        for sc in secondary_info["scenarios"]:
+            sec_rows.append([
+                sc["label"],
+                f"¥{sc['primary_spouse_amount']:,}",
+                f"¥{sc['primary_tax']:,}",
+                f"¥{sc['secondary_tax']:,}",
+                f"¥{sc['total_tax']:,}",
+            ])
+        sec_tbl = Table(sec_rows, colWidths=[55*mm, 30*mm, 25*mm, 25*mm, 35*mm])
+        sec_tbl.setStyle(TableStyle([
+            ("FONT", (0, 0), (-1, -1), font_name, 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2980B9")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (1, 0), (-1, 0), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#EBF5FB")]),
+        ]))
+        story.append(sec_tbl)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            f"<b>🏆 最も税負担が軽いシナリオ: {secondary_info['best_label']}</b>"
+            f"（最大シナリオとの差額: ¥{secondary_info['best_savings']:,}）",
+            s_body,
+        ))
+        story.append(Paragraph(
+            "※ 配偶者の余命・物価変動・他の控除等を考慮した精密試算は税理士にご相談ください。",
+            s_caption,
+        ))
+
+    # ── 3-4. 生前贈与シミュレーション ────────────────────────────────
+    if gift_info and gift_info.get("total_gifted", 0) > 0:
+        story.append(Paragraph("3-4. 生前贈与シミュレーション（相続税法21条の5～9）", s_heading))
+        story.append(Paragraph(
+            f"贈与総額: ¥{gift_info['total_gifted']:,}（"
+            f"暦年贈与 vs 相続時精算課税の比較）",
+            s_body,
+        ))
+        gift_rows = [
+            ["戦略", "非課税枠", "贈与税", "節税効果", "正味節税額"],
+            [
+                "暦年贈与（年110万非課税）",
+                f"¥{gift_info['annual']['tax_free_portion']:,}",
+                f"¥{gift_info['annual']['taxable_gift_tax']:,}",
+                f"¥{gift_info['annual']['inheritance_tax_saved']:,}",
+                f"¥{gift_info['annual']['net_savings']:,}",
+            ],
+            [
+                "相続時精算課税（2,500万非課税）",
+                f"¥{gift_info['lump_sum_2500']['tax_free_portion']:,}",
+                f"¥{gift_info['lump_sum_2500']['taxable_gift_tax']:,}",
+                f"¥{gift_info['lump_sum_2500']['inheritance_tax_saved']:,}",
+                f"¥{gift_info['lump_sum_2500']['net_savings']:,}",
+            ],
+        ]
+        gift_tbl = Table(gift_rows, colWidths=[55*mm, 30*mm, 25*mm, 30*mm, 30*mm])
+        gift_tbl.setStyle(TableStyle([
+            ("FONT", (0, 0), (-1, -1), font_name, 8),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E67E22")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (1, 0), (-1, 0), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(gift_tbl)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            gift_info.get("recommendation", ""),
+            s_body,
+        ))
+        story.append(Paragraph(
+            "※ 2024年改正で暦年贈与は相続開始前7年以内の贈与が持戻し対象。"
+            "相続時精算課税は年110万円の新基礎控除（持戻し対象外）が新設されました。",
+            s_caption,
+        ))
+
+    # ── 3-5. 国際相続の警告 ──────────────────────────────────────────
+    story.append(Paragraph("3-5. 国際相続にご注意", s_heading))
+    story.append(Paragraph(
+        "本シミュレーションは<b>日本国内法</b>に基づく計算です。以下に該当する場合、"
+        "外国の相続法・税制が併用適用される可能性があり、結果が大きく異なります:",
+        s_body,
+    ))
+    intl = [
+        "・被相続人または相続人に<b>外国籍</b>の方がいる",
+        "・<b>海外に資産</b>（不動産・銀行口座・証券口座）がある",
+        "・相続人が<b>海外に居住</b>している（日本の住所を有しない）",
+        "・被相続人が<b>過去に海外居住歴</b>がある（10年以内）",
+    ]
+    for line in intl:
+        story.append(Paragraph(line, s_body))
+    story.append(Paragraph(
+        "上記に該当する場合、<b>国際相続に詳しい弁護士・税理士</b>に必ずご相談ください。"
+        "二重課税防止条約・準拠法の判断・海外資産の評価方法など、専門知識が不可欠です。",
+        s_caption,
+    ))
 
     # ── 4. 次のステップ ───────────────────────────────────────────────
     story.append(Paragraph("4. 次のステップ・専門家への相談", s_heading))
