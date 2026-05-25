@@ -415,6 +415,49 @@ def test_small_residential_none():
     assert r["after_deduction"] == 10_000_000
 
 
+# ─────────────────────────────────────────────────────────────────
+# 二次相続シミュレーション
+# ─────────────────────────────────────────────────────────────────
+
+def test_secondary_inheritance_basic():
+    """1億円・子2名 → 3シナリオで合計税額の差が出る"""
+    from core.inheritance import calculate_secondary_inheritance
+    r = calculate_secondary_inheritance(100_000_000, num_children=2, spouse_own_assets_yen=0)
+    assert len(r["scenarios"]) == 3
+    # 配偶者100%取得は配偶者控除で一次は0だが二次が大きい
+    totals = [s["total_tax"] for s in r["scenarios"]]
+    assert max(totals) > min(totals)  # 差が出る
+    assert r["best_savings"] >= 0
+
+
+def test_secondary_inheritance_zero_children():
+    """子0名 → 空結果"""
+    from core.inheritance import calculate_secondary_inheritance
+    r = calculate_secondary_inheritance(100_000_000, num_children=0)
+    assert r["scenarios"] == []
+
+
+# ─────────────────────────────────────────────────────────────────
+# 生前贈与シミュレーション
+# ─────────────────────────────────────────────────────────────────
+
+def test_gift_strategy_within_annual_exempt():
+    """年110万円ピッタリ・10年・2人 → 贈与税ゼロ"""
+    from core.inheritance import compare_gift_strategies
+    r = compare_gift_strategies(1_100_000, years=10, num_recipients=2,
+                                 estimated_marginal_rate=0.20)
+    assert r["total_gifted"] == 22_000_000
+    assert r["annual"]["taxable_gift_tax"] == 0
+    assert r["annual"]["net_savings"] > 0
+
+
+def test_gift_strategy_over_exempt_triggers_tax():
+    """年200万円・5年・1人 → 暦年贈与で贈与税が発生"""
+    from core.inheritance import compare_gift_strategies
+    r = compare_gift_strategies(2_000_000, years=5, num_recipients=1)
+    assert r["annual"]["taxable_gift_tax"] > 0  # 110万超過部分に課税
+
+
 if __name__ == "__main__":
     # pytest なしで直接実行できるよう簡易ランナー
     import traceback

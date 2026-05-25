@@ -278,6 +278,111 @@ def extract_family_from_text_gemini(text: str) -> Optional[dict]:
     return None
 
 
+def generate_will_draft_gemini(
+    family_summary: str,
+    assets_summary: str,
+    distribution_intent: str,
+) -> str:
+    """
+    自筆証書遺言の「雛形テンプレート」を生成する。
+    弁護士法72条配慮: あくまで一般的な雛形であり、個別事案の助言は行わない。
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return "❌ APIキーが設定されていません。"
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return "❌ `google-generativeai` パッケージが未インストールです。"
+
+    from core.legal_safety import PROMPT_SAFETY_INSTRUCTIONS, with_safety_footer
+
+    prompt = (
+        _PRIVACY_PREAMBLE
+        + PROMPT_SAFETY_INSTRUCTIONS
+        + f"""
+
+あなたは日本の自筆証書遺言の**雛形テンプレート**を提供する一般情報提供者です。
+**個別事案の法的判断・助言は行わず、必ず弁護士・公証人への相談を促すこと**。
+
+【家族構成】
+{family_summary}
+
+【資産状況】
+{assets_summary}
+
+【遺言者の希望（参考）】
+{distribution_intent if distribution_intent.strip() else "（特に指定なし — 一般的な雛形を提示してください）"}
+
+以下の形式で出力してください:
+
+## 📜 自筆証書遺言（雛形テンプレート）
+
+```
+遺言書
+
+遺言者 ○○○○ は、本遺言書により次のとおり遺言する。
+
+第1条（財産の特定と承継）
+  遺言者は、下記の財産を ○○○○ に相続させる。
+  記
+  1. （財産の表示）
+  ...
+
+第2条（遺言執行者の指定）
+  遺言者は、本遺言の遺言執行者として次の者を指定する。
+  住所: ○○○○
+  氏名: ○○○○
+
+第3条（付言事項）
+  （家族へのメッセージ等、任意）
+
+令和○年○月○日
+
+  住所: ○○○○○○
+  氏名: ○○○○                印
+```
+
+## ⚠️ 自筆証書遺言の必須要件（民法968条）
+
+- **全文・日付・氏名を自書**すること（パソコン・代筆は無効）
+- **押印**すること（認印で可、ただし実印推奨）
+- **加除・訂正**は変更場所を指示し、変更した旨を付記して署名押印が必要
+- 財産目録は2019年改正により**パソコン作成可**（ただし各ページに署名押印）
+
+## 📌 法務局保管制度のメリット（推奨）
+
+- 紛失・偽造リスクを回避
+- 検認手続き（家庭裁判所）が不要に
+- 全国の遺言書保管所で **3,900円** で利用可能
+
+## 🚨 必ず専門家にご相談ください
+
+本雛形は一般的なテンプレートであり、以下のような個別事情がある場合は
+**必ず弁護士・公証人にご相談ください**:
+
+- 遺留分（民法1042条）への配慮が必要なケース
+- 自社株・不動産・複雑な資産構成
+- 相続人間に紛争の可能性があるケース
+- 公正証書遺言の作成を検討する場合
+
+最後に必ず「個別事案については弁護士・公証人へのご相談が必要です」と明記してください。"""
+    )
+
+    try:
+        genai.configure(api_key=api_key)
+        try:
+            model = genai.GenerativeModel(_MODEL_NAME)
+            response = model.generate_content(prompt)
+        except Exception:
+            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            response = model.generate_content(prompt)
+        return with_safety_footer(response.text or "")
+    except Exception as e:
+        return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
+
+
 def extract_family_from_audio(
     audio_bytes: bytes, mime_type: str = "audio/wav"
 ) -> Optional[dict]:

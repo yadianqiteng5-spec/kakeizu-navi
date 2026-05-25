@@ -122,7 +122,7 @@ def _sidebar():
         st.markdown(
             """<div style="background:#27AE60;color:white;padding:6px 10px;
             border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
-            ✅ <b>23ケース</b> 自動テスト済<br>
+            ✅ <b>27ケース</b> 自動テスト済<br>
             <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
             </div>""",
             unsafe_allow_html=True,
@@ -174,7 +174,7 @@ st.markdown(
     """<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 12px 0;">
     <span style="background:#27AE60;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
-    ✅ 23ケース 自動テスト済</span>
+    ✅ 27ケース 自動テスト済</span>
     <span style="background:#2980B9;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
     ⚖️ 民法・相続税法準拠</span>
@@ -189,7 +189,7 @@ st.markdown(
 )
 
 # テスト済みケース詳細（折りたたみ）
-with st.expander("📋 テスト済みの法律ケース一覧（23ケース全通過）", expanded=False):
+with st.expander("📋 テスト済みの法律ケース一覧（27ケース全通過）", expanded=False):
     st.markdown("""
 | 分類 | ケース | 根拠条文 |
 |---|---|---|
@@ -944,6 +944,147 @@ elif st.session_state.step == 2:
             """)
         st.divider()
 
+    # ── 3-3-d. 二次相続シミュレーション（配偶者がいる場合） ──────────────────
+    if spouse_id_for_dwelling and spouse_id_for_dwelling in shares \
+            and st.session_state.total_assets > 0:
+        st.subheader("🔄 二次相続シミュレーション")
+        st.caption(
+            "一次相続（被相続人 → 配偶者・子）で配偶者控除を使い切ると一次の税は安くなりますが、"
+            "**配偶者死亡時（二次相続）の税負担が大きく**なります。最適な配分を比較します。"
+        )
+
+        from core.inheritance import calculate_secondary_inheritance
+        # 子の数を算出
+        children_count = sum(
+            1 for hid in shares
+            if hid in set(ft.get_legal_children(propositus_id))
+            and hid != spouse_id_for_dwelling
+        )
+        if children_count == 0:
+            # 代襲相続人を孫として数える
+            children_count = max(1, len(shares) - 1)
+
+        sec_col1, sec_col2 = st.columns([1, 2])
+        with sec_col1:
+            spouse_own_man = st.number_input(
+                "配偶者の固有財産（万円）",
+                min_value=0, value=0, step=100,
+                key="spouse_own_assets",
+                help="配偶者自身が既に保有している財産。二次相続で加算されます。",
+            )
+        with sec_col2:
+            st.caption(
+                f"対象子数: **{children_count}名** "
+                f"／ 一次相続財産: **{st.session_state.total_assets//10000:,}万円**"
+            )
+
+        sec_result = calculate_secondary_inheritance(
+            primary_total_yen=st.session_state.total_assets,
+            num_children=children_count,
+            spouse_own_assets_yen=spouse_own_man * 10000,
+        )
+
+        if sec_result["scenarios"]:
+            sec_rows = []
+            for sc in sec_result["scenarios"]:
+                sec_rows.append({
+                    "シナリオ": sc["label"],
+                    "配偶者取得額": f"{sc['primary_spouse_amount']//10000:,} 万円",
+                    "一次相続税": f"{sc['primary_tax']//10000:,} 万円",
+                    "二次相続税": f"{sc['secondary_tax']//10000:,} 万円",
+                    "合計税額": f"**{sc['total_tax']//10000:,} 万円**",
+                })
+            st.dataframe(sec_rows, use_container_width=True, hide_index=True)
+
+            st.success(
+                f"🏆 **最も税負担が軽いシナリオ**: {sec_result['best_label']}"
+                f"（最大シナリオとの差額: **{sec_result['best_savings']//10000:,}万円**）"
+            )
+            st.caption(
+                "💡 配偶者控除（相続税法19条の2）は「法定相続分」または「1.6億円」のいずれか多い方まで非課税。"
+                "ただし配偶者が多く相続すると二次相続で子の税負担が増えるため、**バランスが重要**です。"
+                "※ 本シミュレーションは概算であり、実際は配偶者の余命・物価変動・他の控除等を考慮した精密な試算が必要です。"
+            )
+        st.divider()
+
+    # ── 3-3-e. 生前贈与シミュレーション ──────────────────────────────────────
+    if st.session_state.total_assets > 0:
+        with st.expander("🎁 生前贈与シミュレーション（暦年贈与 vs 相続時精算課税）", expanded=False):
+            st.caption(
+                "毎年計画的に贈与することで相続財産を圧縮し、相続税を抑える戦略です。"
+                "2024年改正後の制度に基づいて比較します。"
+            )
+            gc1, gc2, gc3 = st.columns(3)
+            with gc1:
+                gift_annual_man = st.number_input(
+                    "1人あたり年間贈与額（万円）",
+                    min_value=0, value=110, step=10,
+                    key="gift_annual",
+                    help="110万円までは暦年贈与で非課税",
+                )
+            with gc2:
+                gift_years = st.number_input(
+                    "贈与期間（年）",
+                    min_value=1, max_value=30, value=10, step=1,
+                    key="gift_years",
+                )
+            with gc3:
+                gift_recipients = st.number_input(
+                    "受贈者数（人）",
+                    min_value=1, value=max(1, children_count if 'children_count' in dir() else 2),
+                    step=1, key="gift_recipients",
+                )
+
+            # 推定される相続税の限界税率（簡易判定）
+            est_rate = 0.10
+            for threshold, rate in [(50_000_000, 0.20), (100_000_000, 0.30),
+                                    (200_000_000, 0.40), (300_000_000, 0.45)]:
+                if st.session_state.total_assets > threshold:
+                    est_rate = rate
+
+            if gift_annual_man > 0:
+                from core.inheritance import compare_gift_strategies
+                gift_result = compare_gift_strategies(
+                    annual_amount_yen=gift_annual_man * 10000,
+                    years=gift_years,
+                    num_recipients=gift_recipients,
+                    estimated_marginal_rate=est_rate,
+                )
+                st.metric(
+                    "贈与総額",
+                    f"{gift_result['total_gifted']//10000:,} 万円",
+                    f"{gift_annual_man}万円 × {gift_years}年 × {gift_recipients}人",
+                )
+
+                # 比較テーブル
+                gift_rows = [
+                    {
+                        "戦略": "📅 暦年贈与（年110万円非課税）",
+                        "非課税枠活用額": f"{gift_result['annual']['tax_free_portion']//10000:,} 万円",
+                        "贈与税": f"{gift_result['annual']['taxable_gift_tax']//10000:,} 万円",
+                        "相続税の節税効果": f"{gift_result['annual']['inheritance_tax_saved']//10000:,} 万円",
+                        "正味節税額": f"**{gift_result['annual']['net_savings']//10000:,} 万円**",
+                    },
+                    {
+                        "戦略": "💼 相続時精算課税（2,500万円非課税）",
+                        "非課税枠活用額": f"{gift_result['lump_sum_2500']['tax_free_portion']//10000:,} 万円",
+                        "贈与税": f"{gift_result['lump_sum_2500']['taxable_gift_tax']//10000:,} 万円",
+                        "相続税の節税効果": f"{gift_result['lump_sum_2500']['inheritance_tax_saved']//10000:,} 万円",
+                        "正味節税額": f"**{gift_result['lump_sum_2500']['net_savings']//10000:,} 万円**",
+                    },
+                ]
+                st.dataframe(gift_rows, use_container_width=True, hide_index=True)
+                st.info(gift_result["recommendation"])
+                st.caption(
+                    "⚠️ **重要な注意点**\n\n"
+                    "- 暦年贈与: 2024年改正で相続開始前**7年以内**の贈与は相続財産に持戻し（旧3年）\n"
+                    "- 相続時精算課税: 一度選択すると暦年贈与に戻れない。受贈者18歳以上＋贈与者60歳以上が要件\n"
+                    "- 教育資金・結婚子育て資金・住宅取得資金等の特例も別途活用可能\n"
+                    "- 推定限界税率: 約{:.0%}（財産総額より自動算定）— 実際は配偶者控除・特例適用後で異なります\n"
+                    "- 個別戦略は必ず**税理士にご相談ください**。".format(est_rate)
+                )
+        st.divider()
+
     # ── 3-4. 事業承継リスクアラート ───────────────────────────────────────────
     risks = get_business_risks(ft, propositus_id)
     if risks:
@@ -1062,6 +1203,64 @@ elif st.session_state.step == 2:
     ]
     for i, pt in enumerate(will_points, 1):
         st.markdown(f"{i}. {pt}")
+
+    # ── 3-6-b. AI遺言書ドラフト生成 ──────────────────────────────────────────
+    from core.gemini_client import is_gemini_available as _is_gem_avail
+    if _is_gem_avail():
+        with st.expander("✍️ AIで自筆証書遺言の雛形を生成（Gemini）", expanded=False):
+            st.warning(
+                "⚖️ **重要**: 出力されるのは**一般的な雛形テンプレート**であり、"
+                "個別事案の法的助言ではありません。実際の作成は**必ず弁護士・公証人にご相談ください**。"
+                "本機能は弁護士法72条に抵触しないよう、特定事案の法律事務は提供しません。"
+            )
+            with st.form("will_draft_form"):
+                distribution_intent = st.text_area(
+                    "希望する財産配分（任意）",
+                    placeholder=(
+                        "例：自宅は妻に、預金は子供たちに均等に、自社株は後継者の長男に集中させたい。\n"
+                        "次女には保険金で配慮したい。等"
+                    ),
+                    height=100,
+                )
+                will_btn = st.form_submit_button(
+                    "📜 雛形テンプレートを生成", type="primary",
+                    disabled=remaining_calls <= 0,
+                )
+
+            if will_btn:
+                from core.gemini_client import generate_will_draft_gemini
+                family_summary = ft.summary()
+                propositus = ft.persons[propositus_id]
+                assets_lines = [
+                    f"被相続人の資産: {propositus.assets_yen:,}円"
+                    f"（{propositus.assets_yen//10000:,}万円）",
+                ]
+                if propositus.has_business_shares:
+                    assets_lines.append("自社株・非上場株を保有")
+                if st.session_state.total_assets:
+                    assets_lines.append(
+                        f"相続財産総額（ユーザー入力）: "
+                        f"{st.session_state.total_assets//10000:,}万円"
+                    )
+                assets_summary = "\n".join(assets_lines)
+
+                with st.spinner("Geminiが遺言書雛形を作成中...（15〜30秒）"):
+                    draft = generate_will_draft_gemini(
+                        family_summary=family_summary,
+                        assets_summary=assets_summary,
+                        distribution_intent=distribution_intent,
+                    )
+                st.session_state.llm_count += 1
+
+                from core.legal_safety import safety_badge
+                st.markdown(safety_badge(), unsafe_allow_html=True)
+                st.markdown(draft)
+                st.download_button(
+                    "📥 雛形をテキストファイルでダウンロード",
+                    data=draft.encode("utf-8"),
+                    file_name=f"will_draft_template_{propositus.name}.txt",
+                    mime="text/plain",
+                )
 
     st.divider()
 

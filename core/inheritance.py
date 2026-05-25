@@ -474,6 +474,209 @@ def count_tax_legal_heirs(family_tree, propositus_id: str) -> dict:
     }
 
 
+def _rough_tax_rate(amount: int) -> float:
+    if amount <= 10_000_000:   return 0.10
+    if amount <= 30_000_000:   return 0.15
+    if amount <= 50_000_000:   return 0.20
+    if amount <= 100_000_000:  return 0.30
+    if amount <= 200_000_000:  return 0.40
+    return 0.45
+
+
+def calculate_secondary_inheritance(
+    primary_total_yen: int,
+    num_children: int,
+    spouse_own_assets_yen: int = 0,
+) -> dict:
+    """
+    二次相続（配偶者死亡時）の税負担を、一次相続での配偶者取得割合別に比較する。
+
+    一次相続の配偶者控除（相続税法19条の2）:
+      配偶者の取得財産が「法定相続分」または「1億6,000万円」のいずれか多い方まで非課税。
+
+    Args:
+        primary_total_yen: 一次相続の財産総額（被相続人の遺産）
+        num_children: 子の人数（二次相続の相続人）
+        spouse_own_assets_yen: 配偶者の固有財産（二次相続で加算される）
+
+    Returns:
+        {
+          "scenarios": [
+            {
+              "label": "配偶者0%取得", "spouse_ratio": 0.0,
+              "primary_spouse_amount": 0, "primary_tax": int,
+              "secondary_total": int, "secondary_tax": int,
+              "total_tax": int,
+            }, ...3パターン
+          ],
+          "best_label": str,  # 合計税額が最小のラベル
+          "best_savings": int, # 最大-最小
+        }
+    """
+    if primary_total_yen <= 0 or num_children <= 0:
+        return {"scenarios": [], "best_label": "", "best_savings": 0}
+
+    SPOUSE_DEDUCTION_FLOOR = 160_000_000  # 配偶者控除の下限
+
+    def _tax_for(amount: int, n_heirs: int) -> int:
+        basic = 30_000_000 + 6_000_000 * n_heirs
+        taxable = max(0, amount - basic)
+        return int(taxable * _rough_tax_rate(taxable))
+
+    scenarios = []
+    for label, ratio in [
+        ("配偶者0%取得（子に全部）", 0.0),
+        ("配偶者法定相続分（1/2）取得", 0.5),
+        ("配偶者100%取得（最大限活用）", 1.0),
+    ]:
+        spouse_amt = int(primary_total_yen * ratio)
+        # 配偶者控除: min(spouse_amt, max(法定相続分, 1.6億))
+        spouse_legal = primary_total_yen / 2  # 配偶者+子なら配偶者は1/2
+        spouse_deduction_limit = max(spouse_legal, SPOUSE_DEDUCTION_FLOOR)
+        taxable_spouse = max(0, spouse_amt - spouse_deduction_limit)
+
+        # 一次相続: 配偶者+子で相続税を計算
+        n_primary_heirs = 1 + num_children
+        primary_total_tax = _tax_for(primary_total_yen, n_primary_heirs)
+        # 配偶者控除分を差し引く（按分の簡易近似）
+        if primary_total_yen > 0:
+            spouse_tax_share = primary_total_tax * (spouse_amt / primary_total_yen)
+            spouse_actual = spouse_tax_share * (
+                taxable_spouse / spouse_amt if spouse_amt > 0 else 0
+            )
+            primary_tax = int(primary_total_tax - spouse_tax_share + spouse_actual)
+        else:
+            primary_tax = 0
+
+        # 二次相続: 配偶者の固有財産 + 一次で取得した分 を子で按分
+        secondary_total = spouse_amt + spouse_own_assets_yen
+        secondary_tax = _tax_for(secondary_total, num_children)
+
+        scenarios.append({
+            "label": label,
+            "spouse_ratio": ratio,
+            "primary_spouse_amount": spouse_amt,
+            "primary_tax": max(0, primary_tax),
+            "secondary_total": secondary_total,
+            "secondary_tax": secondary_tax,
+            "total_tax": max(0, primary_tax) + secondary_tax,
+        })
+
+    totals = [s["total_tax"] for s in scenarios]
+    best_idx = totals.index(min(totals))
+    return {
+        "scenarios": scenarios,
+        "best_label": scenarios[best_idx]["label"],
+        "best_savings": max(totals) - min(totals),
+    }
+
+
+def compare_gift_strategies(
+    annual_amount_yen: int,
+    years: int,
+    num_recipients: int,
+    estimated_marginal_rate: float = 0.20,
+) -> dict:
+    """
+    生前贈与の節税効果を比較する。
+
+    暦年贈与（相続税法21条の5～）:
+      年110万円までは非課税。受贈者1人あたり年間110万円。
+      ただし2024年以降は相続開始前7年以内の贈与は相続財産に持戻し（旧3年→7年）。
+
+    相続時精算課税（相続税法21条の9～）:
+      累計2,500万円までは贈与税非課税、超過分は一律20%。
+      ただし相続時に全額が相続財産に持戻し（節税効果は限定的）。
+
+    Args:
+        annual_amount_yen: 1人あたり年間贈与額
+        years: 贈与年数
+        num_recipients: 受贈者の人数
+        estimated_marginal_rate: 推定される相続税の限界税率（0.0〜0.55）
+
+    Returns:
+        {
+          "annual_exempt_yen": 1_100_000,
+          "total_gifted": int,
+          "annual": { "tax_free_portion": int, "taxable_gift_tax": int, "inheritance_tax_saved": int, "net_savings": int },
+          "lump_sum_2500": { "tax_free_portion": int, "taxable_gift_tax": int, "inheritance_tax_saved": int, "net_savings": int, "note": str },
+          "recommendation": str,
+        }
+    """
+    ANNUAL_EXEMPT = 1_100_000  # 年110万円
+    LUMP_EXEMPT = 25_000_000   # 相続時精算課税2,500万円
+    total_gifted = annual_amount_yen * years * num_recipients
+
+    # ── 暦年贈与シナリオ ──────────────────────────────────────
+    tax_free_per_year_per_person = min(annual_amount_yen, ANNUAL_EXEMPT)
+    annual_tax_free_total = tax_free_per_year_per_person * years * num_recipients
+    annual_taxable = max(0, total_gifted - annual_tax_free_total)
+
+    # 贈与税（一般税率の概算: 200万以下10%, 400万以下15%, 600万以下20%等）
+    def _gift_tax_general(taxable_per_year: int) -> int:
+        if taxable_per_year <= 0: return 0
+        if taxable_per_year <= 2_000_000:  return int(taxable_per_year * 0.10)
+        if taxable_per_year <= 4_000_000:  return int(taxable_per_year * 0.15 - 100_000)
+        if taxable_per_year <= 6_000_000:  return int(taxable_per_year * 0.20 - 300_000)
+        if taxable_per_year <= 10_000_000: return int(taxable_per_year * 0.30 - 900_000)
+        return int(taxable_per_year * 0.40 - 1_900_000)
+
+    annual_excess_per_year = max(0, annual_amount_yen - ANNUAL_EXEMPT)
+    annual_gift_tax = (
+        _gift_tax_general(annual_excess_per_year) * years * num_recipients
+    )
+    annual_inheritance_saved = int(total_gifted * estimated_marginal_rate)
+    annual_net = annual_inheritance_saved - annual_gift_tax
+
+    # ── 相続時精算課税シナリオ ──────────────────────────────
+    lump_total_per_person = annual_amount_yen * years
+    lump_taxfree_per_person = min(lump_total_per_person, LUMP_EXEMPT)
+    lump_taxable_per_person = max(0, lump_total_per_person - LUMP_EXEMPT)
+    lump_gift_tax = int(lump_taxable_per_person * 0.20) * num_recipients
+
+    # 相続時精算課税は基本的に「贈与しても全額相続財産に持戻し」のため節税効果は限定的
+    # ただし2024年改正で年110万円の基礎控除が新設（持戻し対象外）
+    lump_basic_deduction = ANNUAL_EXEMPT * years * num_recipients  # 新基礎控除
+    lump_inheritance_saved = int(
+        min(lump_basic_deduction, total_gifted) * estimated_marginal_rate
+    )
+    lump_net = lump_inheritance_saved - lump_gift_tax
+
+    # ── 推奨判定 ──────────────────────────────────────────
+    if annual_net > lump_net:
+        recommendation = (
+            f"💡 **暦年贈与が有利**（差額: {(annual_net - lump_net):,}円）。"
+            f"年110万円以内なら贈与税ゼロで {annual_inheritance_saved:,}円 の節税効果が"
+            f"期待できます。ただし2024年改正で相続開始前7年以内の贈与は持戻し対象です。"
+        )
+    elif lump_net > annual_net:
+        recommendation = (
+            f"💡 **相続時精算課税が有利**（差額: {(lump_net - annual_net):,}円）。"
+            f"2024年改正で年110万円の基礎控除が新設され、暦年贈与より有利になるケースが増えました。"
+        )
+    else:
+        recommendation = "💡 両者ほぼ同等。受贈者の年齢・将来の生前贈与計画で選択してください。"
+
+    return {
+        "annual_exempt_yen": ANNUAL_EXEMPT,
+        "total_gifted": total_gifted,
+        "annual": {
+            "tax_free_portion": annual_tax_free_total,
+            "taxable_gift_tax": annual_gift_tax,
+            "inheritance_tax_saved": annual_inheritance_saved,
+            "net_savings": annual_net,
+        },
+        "lump_sum_2500": {
+            "tax_free_portion": lump_taxfree_per_person * num_recipients,
+            "taxable_gift_tax": lump_gift_tax,
+            "inheritance_tax_saved": lump_inheritance_saved,
+            "net_savings": lump_net,
+            "note": "2024年改正で年110万円の基礎控除（持戻し対象外）が新設",
+        },
+        "recommendation": recommendation,
+    }
+
+
 def calculate_small_residential_deduction(
     land_type: str,
     land_value_yen: int,
