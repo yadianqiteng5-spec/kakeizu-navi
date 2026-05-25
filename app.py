@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 MAX_FILE_MB = 5
-MAX_LLM_CALLS = 3
+MAX_LLM_CALLS = 8
 
 
 # ── セッション初期化 ────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ if st.session_state.step == 0:
         demo_btn = st.button("📊 デモデータで体験", use_container_width=True)
     with c3:
         if remaining_calls <= 0:
-            st.error("本セッションのAI解析上限（3回）に達しました。ページをリロードしてください。")
+            st.error(f"本セッションのAI解析上限（{MAX_LLM_CALLS}回）に達しました。ページをリロードしてください。")
 
     # ── デモボタン ─────────────────────────────────────────────────────────
     if demo_btn:
