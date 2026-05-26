@@ -364,214 +364,125 @@ if st.session_state.step == 0:
                 st.success(f"✅ {uploaded.name}（{uploaded.size/1024:.0f} KB）")
                 st.image(uploaded, caption="アップロード画像", use_column_width=True)
 
-    # ── 音声入力タブ（ブラウザネイティブWeb Speech API版） ────────────────────
+    # ── 音声入力タブ（2ステップ：①文字起こし → ②内容確認 → ③家族抽出）──────
     with tab_audio:
         st.caption(
-            "🎙️ **ブラウザ内蔵の音声認識**を使います。Geminiへの音声送信は行いません。\n\n"
-            "**手順**: ①下のマイクボタンで話す → ②認識結果をコピー → "
-            "③下のテキストエリアに貼り付け → ④解析"
+            "マイクで家族関係を説明してください。\n"
+            "**ステップ①** Geminiで文字起こし → **ステップ②** 内容を確認・編集 → **ステップ③** 家族構成を解析"
         )
-
-        VOICE_RECOGNIZER_HTML = """
-        <style>
-          .voice-card {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: white; border: 1px solid #e0e0e0; border-radius: 10px;
-            padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-          }
-          .voice-btn {
-            background: #E74C3C; color: white; padding: 14px 24px;
-            border: none; border-radius: 8px; font-size: 16px; font-weight: bold;
-            cursor: pointer; width: 100%; transition: all 0.2s;
-          }
-          .voice-btn:hover { background: #C0392B; }
-          .voice-btn.recording { background: #27AE60; animation: pulse 1.4s infinite; }
-          .voice-btn:disabled { background: #95A5A6; cursor: not-allowed; }
-          @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.6); }
-            50% { box-shadow: 0 0 0 12px rgba(39, 174, 96, 0); }
-          }
-          .voice-status {
-            margin: 10px 0; padding: 8px 12px; border-radius: 6px;
-            font-size: 13px; background: #ECF0F1; color: #34495E;
-          }
-          .voice-status.recording { background: #D5F4E6; color: #16A085; }
-          .voice-status.error { background: #FADBD8; color: #C0392B; }
-          .voice-result {
-            width: 100%; min-height: 140px; padding: 12px;
-            border: 2px solid #BDC3C7; border-radius: 6px; font-size: 14px;
-            line-height: 1.6; box-sizing: border-box; resize: vertical;
-            font-family: inherit;
-          }
-          .voice-result:focus { border-color: #3498DB; outline: none; }
-          .copy-btn {
-            background: #2980B9; color: white; padding: 10px 18px;
-            border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
-            font-weight: bold; margin-top: 8px; width: 100%;
-          }
-          .copy-btn:hover { background: #21618C; }
-          .copy-btn.success { background: #27AE60; }
-        </style>
-        <div class="voice-card">
-          <button id="voiceBtn" class="voice-btn">🎤 録音開始（クリックして話してください）</button>
-          <div id="voiceStatus" class="voice-status">準備完了。ボタンをクリックして話し始めてください。</div>
-          <textarea id="voiceResult" class="voice-result"
-                    placeholder="認識結果がここにリアルタイムで表示されます..."></textarea>
-          <button id="copyBtn" class="copy-btn">📋 結果を全選択してコピー</button>
-        </div>
-        <script>
-        (function() {
-          const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-          const btn = document.getElementById('voiceBtn');
-          const statusEl = document.getElementById('voiceStatus');
-          const result = document.getElementById('voiceResult');
-          const copyBtn = document.getElementById('copyBtn');
-
-          if (!SR) {
-            btn.disabled = true;
-            statusEl.className = 'voice-status error';
-            statusEl.innerHTML = '⚠️ このブラウザはWeb Speech APIに対応していません。<br>'
-                                + 'Chrome / Edge / Safari でアクセスしてください。';
-            return;
-          }
-
-          const recognition = new SR();
-          recognition.lang = 'ja-JP';
-          recognition.continuous = true;
-          recognition.interimResults = true;
-
-          let recording = false;
-          let finalTranscript = '';
-
-          btn.addEventListener('click', () => {
-            if (recording) {
-              recognition.stop();
-            } else {
-              finalTranscript = result.value || '';
-              if (finalTranscript && !finalTranscript.endsWith(' ')) finalTranscript += ' ';
-              try {
-                recognition.start();
-              } catch (e) {
-                statusEl.className = 'voice-status error';
-                statusEl.innerHTML = '⚠️ 録音開始エラー: ' + e.message;
-              }
-            }
-          });
-
-          recognition.onstart = () => {
-            recording = true;
-            btn.textContent = '⏹️ 録音停止（クリック）';
-            btn.classList.add('recording');
-            statusEl.className = 'voice-status recording';
-            statusEl.innerHTML = '🔴 録音中... マイクに向かって話してください';
-          };
-
-          recognition.onend = () => {
-            recording = false;
-            btn.textContent = '🎤 録音再開（追記する）';
-            btn.classList.remove('recording');
-            statusEl.className = 'voice-status';
-            statusEl.innerHTML = '✅ 録音停止しました。結果を確認してください。';
-          };
-
-          recognition.onerror = (event) => {
-            statusEl.className = 'voice-status error';
-            const msgs = {
-              'no-speech': '音声が検出されませんでした。もう一度話してください。',
-              'audio-capture': 'マイクが見つかりません。マイク接続を確認してください。',
-              'not-allowed': 'マイクアクセスが拒否されました。ブラウザのマイク許可を確認してください。',
-              'aborted': '録音が中断されました。',
-              'network': 'ネットワークエラーが発生しました。',
-              'language-not-supported': '日本語認識がサポートされていません。',
-            };
-            statusEl.innerHTML = '⚠️ エラー: ' + (msgs[event.error] || event.error);
-          };
-
-          recognition.onresult = (event) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                finalTranscript += transcript;
-              } else {
-                interim += transcript;
-              }
-            }
-            result.value = finalTranscript + interim;
-          };
-
-          copyBtn.addEventListener('click', async () => {
-            const text = result.value;
-            try {
-              await navigator.clipboard.writeText(text);
-              copyBtn.textContent = '✅ コピーしました！下のテキストエリアに貼り付けてください';
-              copyBtn.classList.add('success');
-            } catch (e) {
-              // フォールバック: 全選択のみ
-              result.focus();
-              result.select();
-              copyBtn.textContent = '⚠️ Ctrl+C / Cmd+C でコピーしてください（全選択済）';
-            }
-            setTimeout(() => {
-              copyBtn.textContent = '📋 結果を全選択してコピー';
-              copyBtn.classList.remove('success');
-            }, 4000);
-          });
-        })();
-        </script>
-        """
-        import streamlit.components.v1 as components
-        components.html(VOICE_RECOGNIZER_HTML, height=460)
-
-        st.markdown("---")
-        st.markdown("##### 📝 ステップ② 認識結果を貼り付け（編集可能）")
-        edited_transcript = st.text_area(
-            "上の認識結果をコピーして、ここに貼り付けてください。手動編集もOK。",
-            value=st.session_state.audio_transcript,
-            height=160,
-            key="audio_transcript_editor",
-            placeholder=(
-                "例：父の山田太郎が亡くなりました。配偶者の花子は健在です。\n"
-                "子供は長男・一郎、長女・二子、次男・三郎の3人で、三郎は数年前に死亡しています。\n"
-                "三郎には子・四郎がいます。遺産は自宅3,000万円と預金2,000万円です。"
-            ),
-        )
-        st.session_state.audio_transcript = edited_transcript
-
-        ac1, ac2 = st.columns([3, 1])
-        with ac1:
-            extract_btn = st.button(
-                "🔍 ステップ③ この内容から家族構成を解析する",
-                type="primary",
-                use_container_width=True,
-                disabled=(remaining_calls <= 0 or not edited_transcript.strip()),
-                key="extract_from_transcript_btn",
+        try:
+            audio_input = st.audio_input(
+                "録音（クリックして開始 / 再クリックで停止）",
+                key="audio_input_widget",
             )
-        with ac2:
-            clear_btn = st.button(
-                "🗑 クリア",
-                use_container_width=True,
-                key="clear_transcript_btn",
+        except AttributeError:
+            audio_input = None
+            st.error(
+                "`st.audio_input` を使用するには Streamlit 1.36 以上が必要です。\n\n"
+                "次のコマンドでアップグレードしてください: `pip install -U streamlit`"
             )
 
-        if clear_btn:
-            st.session_state.audio_transcript = ""
-            st.rerun()
+        if audio_input is not None:
+            from core.gemini_client import is_gemini_available
+            st.audio(audio_input)
+            audio_size_kb = len(audio_input.getvalue()) / 1024
+            st.caption(f"録音サイズ: {audio_size_kb:.0f} KB")
 
-        if extract_btn:
-            from core.gemini_client import extract_family_from_text_gemini
-            with st.spinner("Geminiが家族構成を解析中...（10〜20秒）"):
-                result = extract_family_from_text_gemini(edited_transcript)
-
-            if result and result.get("persons"):
-                st.session_state.ai_raw_result = result
-                st.session_state.llm_count += 1
-                st.session_state.edit_state = None
-                st.session_state.audio_transcript = ""   # クリア
-                st.session_state.step = 1
-                st.rerun()
+            if not is_gemini_available():
+                st.warning(
+                    "Gemini APIキー（環境変数 `GEMINI_API_KEY` または `GOOGLE_API_KEY`）が"
+                    "設定されていないため、音声解析は利用できません。"
+                )
             else:
-                st.error(
+                # ── ステップ① 文字起こしボタン ─────────────────────────────
+                transcribe_btn = st.button(
+                    "🎙️ ステップ① 文字起こしする（Gemini）",
+                    type="primary" if not st.session_state.audio_transcript else "secondary",
+                    use_container_width=True,
+                    disabled=remaining_calls <= 0,
+                    key="transcribe_audio_btn",
+                )
+
+                if transcribe_btn:
+                    from core.gemini_client import transcribe_audio, _detect_audio_mime
+                    audio_bytes = audio_input.getvalue()
+                    declared_mime = getattr(audio_input, "type", None) or "audio/wav"
+                    detected_mime = _detect_audio_mime(audio_bytes, fallback=declared_mime)
+
+                    # デバッグ情報を表示（解決後の問題切り分けに有用）
+                    st.caption(
+                        f"🔍 デバッグ: ブラウザ申告 `{declared_mime}` / "
+                        f"実バイト判定 `{detected_mime}` / サイズ {len(audio_bytes):,} bytes"
+                    )
+
+                    with st.spinner("Geminiが音声を文字起こし中...（10〜30秒）"):
+                        transcript, error = transcribe_audio(
+                            audio_bytes, "auto", verbose=True
+                        )
+
+                    del audio_bytes  # 即時解放
+
+                    if transcript:
+                        st.session_state.audio_transcript = transcript
+                        st.session_state.llm_count += 1
+                        st.rerun()
+                    else:
+                        st.error(
+                            f"文字起こしに失敗しました。\n\n"
+                            f"**詳細エラー**: `{error}`\n\n"
+                            "対処方法:\n"
+                            "- マイク許可を確認してから録音し直す\n"
+                            "- もう少しゆっくり・はっきり話す（最低5秒以上）\n"
+                            "- ブラウザを Chrome / Edge / Safari に変える\n"
+                            "- テキスト入力タブに切り替える"
+                        )
+
+        # ── ステップ② 文字起こし結果の確認・編集 → ステップ③ 家族抽出 ──────
+        if st.session_state.audio_transcript:
+            st.markdown("---")
+            st.markdown("##### 📝 ステップ② 文字起こし結果（編集可能）")
+            edited_transcript = st.text_area(
+                "下記の内容を確認し、必要に応じて修正してください",
+                value=st.session_state.audio_transcript,
+                height=180,
+                key="audio_transcript_editor",
+            )
+            st.session_state.audio_transcript = edited_transcript
+
+            ac1, ac2 = st.columns([3, 1])
+            with ac1:
+                extract_btn = st.button(
+                    "🔍 ステップ③ この内容から家族構成を解析する",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=(remaining_calls <= 0 or not edited_transcript.strip()),
+                    key="extract_from_transcript_btn",
+                )
+            with ac2:
+                clear_btn = st.button(
+                    "🗑 クリア",
+                    use_container_width=True,
+                    key="clear_transcript_btn",
+                )
+
+            if clear_btn:
+                st.session_state.audio_transcript = ""
+                st.rerun()
+
+            if extract_btn:
+                from core.gemini_client import extract_family_from_text_gemini
+                with st.spinner("Geminiが家族構成を解析中...（10〜20秒）"):
+                    result = extract_family_from_text_gemini(edited_transcript)
+
+                if result and result.get("persons"):
+                    st.session_state.ai_raw_result = result
+                    st.session_state.llm_count += 1
+                    st.session_state.edit_state = None
+                    st.session_state.audio_transcript = ""   # クリア
+                    st.session_state.step = 1
+                    st.rerun()
+                else:
+                    st.error(
                         "家族構成の抽出に失敗しました。\n"
                         "文字起こし結果に人物名・続柄・生年などを補足してから再度お試しください。"
                     )
