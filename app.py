@@ -16,21 +16,14 @@ _ICON_MASKABLE_PATH = _ICON_DIR / "icon_maskable.svg"
 
 def _load_icon_for_page():
     """ファビコン用にPIL Imageを返す（SVGをPNGにレンダリング、失敗時は絵文字）"""
-    png_path = _ICON_DIR / "icon.png"
-    if png_path.exists():
-        try:
-            from PIL import Image
+    try:
+        from PIL import Image
+        png_path = _ICON_DIR / "icon.png"
+        if png_path.exists():
             return Image.open(png_path)
-        except Exception:
-            pass
-        # PIL がない場合: base64 data URI として返す（Streamlit は URL を受け付ける）
-        try:
-            import base64 as _b64
-            data = _b64.b64encode(png_path.read_bytes()).decode("ascii")
-            return f"data:image/png;base64,{data}"
-        except Exception:
-            pass
-    # 最終フォールバック: 絵文字
+    except Exception:
+        pass
+    # フォールバック: 絵文字
     return "🌳"
 
 
