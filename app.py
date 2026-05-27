@@ -404,21 +404,12 @@ if st.session_state.step == 0:
                 )
 
                 if transcribe_btn:
-                    from core.gemini_client import transcribe_audio, _detect_audio_mime
+                    from core.gemini_client import transcribe_audio
                     audio_bytes = audio_input.getvalue()
-                    declared_mime = getattr(audio_input, "type", None) or "audio/wav"
-                    detected_mime = _detect_audio_mime(audio_bytes, fallback=declared_mime)
+                    mime = getattr(audio_input, "type", None) or "audio/wav"
 
-                    # デバッグ情報を表示（解決後の問題切り分けに有用）
-                    st.caption(
-                        f"🔍 デバッグ: ブラウザ申告 `{declared_mime}` / "
-                        f"実バイト判定 `{detected_mime}` / サイズ {len(audio_bytes):,} bytes"
-                    )
-
-                    with st.spinner("Geminiが音声を文字起こし中...（10〜30秒）"):
-                        transcript, error = transcribe_audio(
-                            audio_bytes, "auto", verbose=True
-                        )
+                    with st.spinner("Geminiが音声を文字起こし中...（10〜20秒）"):
+                        transcript = transcribe_audio(audio_bytes, mime)
 
                     del audio_bytes  # 即時解放
 
@@ -428,12 +419,9 @@ if st.session_state.step == 0:
                         st.rerun()
                     else:
                         st.error(
-                            f"文字起こしに失敗しました。\n\n"
-                            f"**詳細エラー**: `{error}`\n\n"
-                            "対処方法:\n"
-                            "- マイク許可を確認してから録音し直す\n"
-                            "- もう少しゆっくり・はっきり話す（最低5秒以上）\n"
-                            "- ブラウザを Chrome / Edge / Safari に変える\n"
+                            "文字起こしに失敗しました。次をお試しください:\n"
+                            "- もう少しゆっくり・はっきり話す\n"
+                            "- 録音し直す（マイクの音量を確認）\n"
                             "- テキスト入力タブに切り替える"
                         )
 

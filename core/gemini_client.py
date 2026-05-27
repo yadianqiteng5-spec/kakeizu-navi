@@ -214,107 +214,36 @@ _TEXT_EXTRACT_PROMPT_TMPL = _PRIVACY_PREAMBLE + """以下のテキストから�
 - is_renounced は明確に「相続放棄した」と述べた場合のみ true"""
 
 
-# Gemini が公式サポートする音声MIME（タックスアンサーの対応形式）
-# https://ai.google.dev/gemini-api/docs/audio
-_GEMINI_AUDIO_MIMES = [
-    "audio/wav",
-    "audio/mp3",
-    "audio/mpeg",
-    "audio/aiff",
-    "audio/aac",
-    "audio/ogg",
-    "audio/flac",
-    "audio/webm",  # 一部モデルで対応
-]
-
-
-def _detect_audio_mime(audio_bytes: bytes, fallback: str = "audio/wav") -> str:
-    """マジックバイトから音声形式を自動判定する"""
-    if not audio_bytes:
-        return fallback
-    head = audio_bytes[:16]
-    if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
-        return "audio/wav"
-    if head[:4] == b"OggS":
-        return "audio/ogg"
-    if head[:4] == b"fLaC":
-        return "audio/flac"
-    if head[:3] == b"ID3" or head[:2] == b"\xff\xfb" or head[:2] == b"\xff\xf3":
-        return "audio/mp3"
-    if head[:4] == b"\x1a\x45\xdf\xa3":  # EBML header (WebM/Matroska)
-        return "audio/webm"
-    if head[:4] == b"FORM" and head[8:12] == b"AIFF":
-        return "audio/aiff"
-    return fallback
-
-
 def transcribe_audio(
-    audio_bytes: bytes, mime_type: str = "audio/wav", verbose: bool = False
-):
+    audio_bytes: bytes, mime_type: str = "audio/wav"
+) -> Optional[str]:
     """
     音声を文字起こしのみ実行する（家族抽出はしない）。
-
-    Args:
-        audio_bytes: 音声バイナリ
-        mime_type: MIME（"auto" でマジックバイトから自動判定）
-        verbose: True なら (transcript, error_msg) のタプルを返す
-
-    Returns:
-        verbose=False: Optional[str]（後方互換）
-        verbose=True:  tuple[Optional[str], Optional[str]] = (transcript, error)
+    呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
     """
-    def _result(transcript, error):
-        if verbose:
-            return transcript, error
-        return transcript
-
     api_key = _get_api_key()
     if not api_key:
-        return _result(None, "GEMINI_API_KEY または GOOGLE_API_KEY が未設定です")
+        return None
 
     try:
         import google.generativeai as genai
     except ImportError:
-        return _result(None, "google-generativeai パッケージが未インストールです")
-
-    if not audio_bytes:
-        return _result(None, "音声データが空です")
-
-    # MIME 自動判定
-    if mime_type in ("auto", None, ""):
-        mime_type = _detect_audio_mime(audio_bytes)
-    detected = _detect_audio_mime(audio_bytes, fallback=mime_type)
-    # ブラウザが申告したMIMEと実際のマジックバイトが食い違う場合は実バイトを優先
-    if detected != mime_type:
-        mime_type = detected
+        return None
 
     try:
         genai.configure(api_key=api_key)
-    except Exception as e:
-        return _result(None, f"API設定エラー: {e}")
+        audio_part = {"mime_type": mime_type, "data": audio_bytes}
 
-    # 複数のモデル+MIMEで試行
-    last_error = None
-    candidate_mimes = [mime_type]
-    # フォールバック: 元のMIMEが効かなければ wav として再試行
-    if mime_type != "audio/wav":
-        candidate_mimes.append("audio/wav")
+        try:
+            model = genai.GenerativeModel(_MODEL_NAME)
+            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
+        except Exception:
+            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
 
-    for model_name in (_MODEL_NAME, _FALLBACK_MODEL):
-        for mime in candidate_mimes:
-            try:
-                model = genai.GenerativeModel(model_name)
-                audio_part = {"mime_type": mime, "data": audio_bytes}
-                response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
-                text = (response.text or "").strip()
-                if text:
-                    return _result(text, None)
-                last_error = f"{model_name}/{mime}: 空のレスポンス"
-            except Exception as e:
-                last_error = f"{model_name}/{mime}: {type(e).__name__}: {str(e)[:200]}"
-                continue
-
-    return _result(None, last_error or "原因不明のエラー")
+        return (response.text or "").strip() or None
+    except Exception:
+        return None
 
 
 def extract_family_from_text_gemini(text: str) -> Optional[dict]:
