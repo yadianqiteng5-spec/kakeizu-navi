@@ -1614,22 +1614,26 @@ elif st.session_state.step == 2:
         </p>
         <p style="margin:0 0 10px 0;font-size:14px;line-height:1.8;">
         <b>弁護士・税理士・司法書士の先生方へ</b>: 計算ロジックの誤り・改善点を
-        ご指摘いただける場合、お問い合わせフォーム（準備中）より歓迎いたします。
+        ご指摘いただける場合、GitHub Issues または下記より歓迎いたします。
         本アプリは <b>弁護士法72条</b> に抵触しない設計（特定事案への法律事務を行わない一般情報提供）と
         しており、専門家の皆様のお仕事を補完・促進するツールを目指しています。
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <a href="https://github.com/yadianqiteng5-spec/kakeizu-navi/issues"
+               target="_blank" rel="noopener"
+               style="background:#1ABC9C;color:white;padding:8px 16px;
+                      border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">
+               🐛 GitHub Issuesで指摘する
+            </a>
+            <a href="https://github.com/yadianqiteng5-spec/kakeizu-navi"
+               target="_blank" rel="noopener"
+               style="background:#34495E;color:white;padding:8px 16px;
+                      border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">
+               📂 ソースコードを見る
+            </a>
             <span style="background:#27AE60;color:white;padding:8px 16px;
                   border-radius:6px;font-weight:bold;font-size:13px;">
                ✅ 39ケース自動テスト済
-            </span>
-            <span style="background:#2980B9;color:white;padding:8px 16px;
-                  border-radius:6px;font-weight:bold;font-size:13px;">
-               ⚖️ 国税庁公表値と一致
-            </span>
-            <span style="background:#8E44AD;color:white;padding:8px 16px;
-                  border-radius:6px;font-weight:bold;font-size:13px;">
-               🔒 弁護士法72条配慮
             </span>
         </div>
         </div>""",
