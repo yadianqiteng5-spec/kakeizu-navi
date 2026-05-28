@@ -301,9 +301,13 @@ st.markdown(
             ['author',      'DrumNavi'],
             ['language',    'Japanese'],
             ['google-site-verification', 'n_AX9yEnS6_rP9FTj8PBBNu9l_w6kFSkYciOUPOMEiM'],
+            ['google-site-verification', 'cujMT7Z2DACik_YaEdaBXDYEDLSlb8IoxeWx9OtBf6E'],
         ];
-        nameMetas.forEach(([name, content]) => {{
+        // 先に対象name群を一括削除（同名複数タグ＝認証トークン2件に対応）
+        [...new Set(nameMetas.map(([n]) => n))].forEach(name => {{
             head.querySelectorAll(`meta[name="${{name}}"]`).forEach(el => el.remove());
+        }});
+        nameMetas.forEach(([name, content]) => {{
             const m = document.createElement('meta');
             m.setAttribute('name', name);
             m.setAttribute('content', content);
