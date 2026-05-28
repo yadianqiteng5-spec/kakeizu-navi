@@ -138,31 +138,111 @@ MAX_FILE_MB = 5
 MAX_LLM_CALLS = 8
 
 
-# ── OGPメタタグ注入（SNSシェア時のプレビュー用） ─────────────────────────────
+# ── SEO / OGP メタタグ注入 ────────────────────────────────────────────────
 _OGP_TITLE = "家系図Navi｜相続・事業承継シミュレーター"
-_OGP_DESC = "家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが診断。ゼロ・リテンション設計でデータは一切保存されません。"
-_OGP_URL = "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/"
+_OGP_DESC  = (
+    "家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが自動診断。"
+    "民法・相続税法準拠の計算精度を国税庁公表値で厳密検証済み。"
+    "データはブラウザ内のみで処理し、サーバーに一切保存しません。"
+)
+_OGP_URL   = "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/"
+_OGP_IMAGE = f"{_OGP_URL}~/+/media/static/icon_512.png"
+_KEYWORDS  = (
+    "相続,家系図,法定相続分,相続税,事業承継,遺留分,遺言書,相続シミュレーター,"
+    "相続税計算,家族信託,自筆証書遺言,小規模宅地,二次相続,生前贈与,AI診断"
+)
+
+# JSON-LD 構造化データ（SoftwareApplication schema）
+_JSONLD = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "家系図Navi",
+    "alternateName": "家系図Navi｜相続・事業承継シミュレーター",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "url": _OGP_URL,
+    "description": _OGP_DESC,
+    "inLanguage": "ja",
+    "image": _OGP_IMAGE,
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "JPY"},
+    "author": {"@type": "Person", "name": "DrumNavi"},
+    "featureList": [
+        "法定相続分計算（民法900条準拠）",
+        "相続税概算（国税庁速算表使用）",
+        "遺留分計算（民法1042条準拠）",
+        "事業承継リスク診断",
+        "小規模宅地等の特例",
+        "二次相続シミュレーション",
+        "生前贈与シミュレーション",
+        "自筆証書遺言ドラフト生成",
+        "家系図ビジュアライズ",
+    ],
+}
+
+import json as _json_seo
+_JSONLD_STR = _json_seo.dumps(_JSONLD, ensure_ascii=False)
+
 st.markdown(
     f"""<script>
     (function() {{
         const head = window.parent.document.head;
-        const metas = [
-            ['og:title', '{_OGP_TITLE}'],
-            ['og:description', '{_OGP_DESC}'],
-            ['og:url', '{_OGP_URL}'],
-            ['og:type', 'website'],
-            ['twitter:card', 'summary_large_image'],
-            ['twitter:title', '{_OGP_TITLE}'],
-            ['twitter:description', '{_OGP_DESC}'],
+
+        // ── name系メタタグ（description / keywords / robots / author） ──
+        const nameMetas = [
+            ['description', `{_OGP_DESC}`],
+            ['keywords',    '{_KEYWORDS}'],
+            ['robots',      'index, follow'],
+            ['author',      'DrumNavi'],
+            ['language',    'Japanese'],
         ];
-        metas.forEach(([prop, content]) => {{
-            if (head.querySelector(`meta[property="${{prop}}"], meta[name="${{prop}}"]`)) return;
+        nameMetas.forEach(([name, content]) => {{
+            head.querySelectorAll(`meta[name="${{name}}"]`).forEach(el => el.remove());
+            const m = document.createElement('meta');
+            m.setAttribute('name', name);
+            m.setAttribute('content', content);
+            head.appendChild(m);
+        }});
+
+        // ── canonical URL ──
+        head.querySelectorAll('link[rel="canonical"]').forEach(el => el.remove());
+        const canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        canonical.setAttribute('href', '{_OGP_URL}');
+        head.appendChild(canonical);
+
+        // ── OGP / Twitter Card ──
+        const ogMetas = [
+            ['og:title',       '{_OGP_TITLE}'],
+            ['og:description', `{_OGP_DESC}`],
+            ['og:url',         '{_OGP_URL}'],
+            ['og:type',        'website'],
+            ['og:site_name',   '家系図Navi'],
+            ['og:locale',      'ja_JP'],
+            ['og:image',       '{_OGP_IMAGE}'],
+            ['og:image:width',  '512'],
+            ['og:image:height', '512'],
+            ['twitter:card',        'summary_large_image'],
+            ['twitter:title',       '{_OGP_TITLE}'],
+            ['twitter:description', `{_OGP_DESC}`],
+            ['twitter:image',       '{_OGP_IMAGE}'],
+        ];
+        ogMetas.forEach(([prop, content]) => {{
+            head.querySelectorAll(`meta[property="${{prop}}"], meta[name="${{prop}}"]`).forEach(el => el.remove());
             const m = document.createElement('meta');
             if (prop.startsWith('og:')) m.setAttribute('property', prop);
             else m.setAttribute('name', prop);
             m.setAttribute('content', content);
             head.appendChild(m);
         }});
+
+        // ── JSON-LD 構造化データ ──
+        if (!head.querySelector('script[data-id="kakeizu-jsonld"]')) {{
+            const s = document.createElement('script');
+            s.setAttribute('type', 'application/ld+json');
+            s.setAttribute('data-id', 'kakeizu-jsonld');
+            s.textContent = {repr(_JSONLD_STR)};
+            head.appendChild(s);
+        }}
     }})();
     </script>""",
     unsafe_allow_html=True,
