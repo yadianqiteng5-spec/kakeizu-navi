@@ -194,6 +194,7 @@ st.markdown(
             ['robots',      'index, follow'],
             ['author',      'DrumNavi'],
             ['language',    'Japanese'],
+            ['google-site-verification', 'n_AX9yEnS6_rP9FTj8PBBNu9l_w6kFSkYciOUPOMEiM'],
         ];
         nameMetas.forEach(([name, content]) => {{
             head.querySelectorAll(`meta[name="${{name}}"]`).forEach(el => el.remove());
