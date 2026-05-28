@@ -180,14 +180,120 @@ _JSONLD = {
 }
 
 import json as _json_seo
+
 _JSONLD_STR = _json_seo.dumps(_JSONLD, ensure_ascii=False)
+
+# FAQ 構造化データ（Googleリッチリザルト「よくある質問」対象）
+_FAQ_JSONLD = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "法定相続分とは何ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "法定相続分とは、民法900条に定められた相続人ごとの相続割合です。"
+                    "配偶者と子がいる場合は各1/2、配偶者と直系尊属は2/3:1/3、"
+                    "配偶者と兄弟姉妹は3/4:1/4となります。家系図Naviでは家族構成を入力するだけで自動計算できます。"
+                ),
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "相続税の基礎控除はいくらですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "相続税の基礎控除は「3,000万円 + 600万円 × 法定相続人の数」です（相続税法15条）。"
+                    "例えば法定相続人が3名の場合、3,000万円 + 1,800万円 = 4,800万円が非課税となります。"
+                    "家系図Naviでは国税庁公表の速算表を用いて正確な概算税額を自動計算します。"
+                ),
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "遺留分とは何ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "遺留分とは、配偶者・子・直系尊属に法律上保証された最低限の相続割合です（民法1042条）。"
+                    "総体的遺留分は直系尊属のみの場合1/3、それ以外は1/2です。"
+                    "兄弟姉妹には遺留分がありません。家系図Naviでは各相続人の遺留分を自動で計算・表示します。"
+                ),
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "事業承継でよくあるリスクは何ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "主なリスクは①自社株の分散（後継者以外に相続されると経営権が分散する）、"
+                    "②配偶者への自社株集中（配偶者が高齢の場合、二次相続でさらに分散するリスク）、"
+                    "③相続税による株式売却リスク、などです。"
+                    "家系図NaviのAI診断では、これらのリスクを自動で評価し優先対応策を提示します。"
+                ),
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "入力した個人情報はどこかに保存されますか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "家系図Naviはゼロ・リテンション設計を採用しています。"
+                    "入力された家族構成・資産情報・音声データは、ブラウザのセッション内のみで処理され、"
+                    "サーバーには一切保存されません。ブラウザを閉じた時点でデータは完全に消去されます。"
+                ),
+            },
+        },
+        {
+            "@type": "Question",
+            "name": "小規模宅地等の特例とは何ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": (
+                    "小規模宅地等の特例は、相続した土地の評価額を大幅に減額できる制度です（租税特別措置法69条の4）。"
+                    "特定居住用宅地（自宅）は330㎡まで80%減額、特定事業用宅地は400㎡まで80%減額、"
+                    "貸付事業用宅地は200㎡まで50%減額されます。"
+                    "家系図Naviでは面積と土地の種類を入力するだけで概算節税額を計算できます。"
+                ),
+            },
+        },
+    ],
+}
+_FAQ_JSONLD_STR = _json_seo.dumps(_FAQ_JSONLD, ensure_ascii=False)
+
+# Breadcrumb 構造化データ
+_BREADCRUMB_JSONLD = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "ホーム", "item": _OGP_URL},
+    ],
+}
+_BREADCRUMB_JSONLD_STR = _json_seo.dumps(_BREADCRUMB_JSONLD, ensure_ascii=False)
+
+# WebSite schema（サイト全体のサイトリンク検索ボックス対応）
+_WEBSITE_JSONLD = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "家系図Navi",
+    "url": _OGP_URL,
+    "description": _OGP_DESC,
+    "inLanguage": "ja",
+    "publisher": {"@type": "Person", "name": "DrumNavi"},
+}
+_WEBSITE_JSONLD_STR = _json_seo.dumps(_WEBSITE_JSONLD, ensure_ascii=False)
 
 st.markdown(
     f"""<script>
     (function() {{
         const head = window.parent.document.head;
 
-        // ── name系メタタグ（description / keywords / robots / author） ──
+        // ── name系メタタグ ──
         const nameMetas = [
             ['description', `{_OGP_DESC}`],
             ['keywords',    '{_KEYWORDS}'],
@@ -202,6 +308,16 @@ st.markdown(
             m.setAttribute('name', name);
             m.setAttribute('content', content);
             head.appendChild(m);
+        }});
+
+        // ── hreflang（日本語コンテンツ宣言） ──
+        head.querySelectorAll('link[hreflang]').forEach(el => el.remove());
+        [['ja', '{_OGP_URL}'], ['x-default', '{_OGP_URL}']].forEach(([lang, href]) => {{
+            const l = document.createElement('link');
+            l.setAttribute('rel', 'alternate');
+            l.setAttribute('hreflang', lang);
+            l.setAttribute('href', href);
+            head.appendChild(l);
         }});
 
         // ── canonical URL ──
@@ -236,14 +352,22 @@ st.markdown(
             head.appendChild(m);
         }});
 
-        // ── JSON-LD 構造化データ ──
-        if (!head.querySelector('script[data-id="kakeizu-jsonld"]')) {{
-            const s = document.createElement('script');
-            s.setAttribute('type', 'application/ld+json');
-            s.setAttribute('data-id', 'kakeizu-jsonld');
-            s.textContent = {repr(_JSONLD_STR)};
-            head.appendChild(s);
-        }}
+        // ── JSON-LD 構造化データ（複数） ──
+        const jsonlds = [
+            ['kakeizu-jsonld',      {repr(_JSONLD_STR)}],
+            ['kakeizu-faq',         {repr(_FAQ_JSONLD_STR)}],
+            ['kakeizu-breadcrumb',  {repr(_BREADCRUMB_JSONLD_STR)}],
+            ['kakeizu-website',     {repr(_WEBSITE_JSONLD_STR)}],
+        ];
+        jsonlds.forEach(([id, data]) => {{
+            if (!head.querySelector(`script[data-id="${{id}}"]`)) {{
+                const s = document.createElement('script');
+                s.setAttribute('type', 'application/ld+json');
+                s.setAttribute('data-id', id);
+                s.textContent = data;
+                head.appendChild(s);
+            }}
+        }});
     }})();
     </script>""",
     unsafe_allow_html=True,

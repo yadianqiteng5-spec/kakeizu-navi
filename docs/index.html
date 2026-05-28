@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家系図Navi｜無料の相続・事業承継シミュレーター</title>
+  <meta name="description" content="家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが自動診断。民法・相続税法準拠の計算精度を国税庁公表値で厳密検証済み。データはブラウザ内のみで処理し、サーバーに一切保存しません。">
+  <meta name="keywords" content="相続,家系図,法定相続分,相続税,事業承継,遺留分,遺言書,相続シミュレーター,相続税計算,家族信託,自筆証書遺言,小規模宅地,二次相続,生前贈与,AI診断">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="DrumNavi">
+  <meta name="google-site-verification" content="n_AX9yEnS6_rP9FTj8PBBNu9l_w6kFSkYciOUPOMEiM">
+  <link rel="canonical" href="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/">
+  <link rel="alternate" hreflang="ja" href="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/">
+  <link rel="alternate" hreflang="x-default" href="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/">
+
+  <!-- OGP -->
+  <meta property="og:title" content="家系図Navi｜無料の相続・事業承継シミュレーター">
+  <meta property="og:description" content="家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが自動診断。国税庁公表値で検証済みの計算精度。完全無料・データ保存なし。">
+  <meta property="og:url" content="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="家系図Navi">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="家系図Navi｜無料の相続・事業承継シミュレーター">
+  <meta name="twitter:description" content="家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが自動診断。">
+
+  <!-- JSON-LD: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "家系図Navi",
+    "alternateName": "家系図Navi｜相続・事業承継シミュレーター",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "url": "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/",
+    "description": "家族構成を入力するだけで法定相続分・遺留分・相続税概算・事業承継リスクをAIが自動診断。民法・相続税法準拠の計算精度を国税庁公表値で厳密検証済み。",
+    "inLanguage": "ja",
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "JPY"},
+    "author": {"@type": "Person", "name": "DrumNavi"},
+    "featureList": [
+      "法定相続分計算（民法900条準拠）",
+      "相続税概算（国税庁速算表使用）",
+      "遺留分計算（民法1042条準拠）",
+      "事業承継リスク診断",
+      "小規模宅地等の特例",
+      "二次相続シミュレーション",
+      "生前贈与シミュレーション",
+      "自筆証書遺言ドラフト生成",
+      "家系図ビジュアライズ"
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "法定相続分とは何ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "法定相続分とは、民法900条に定められた相続人ごとの相続割合です。配偶者と子がいる場合は各1/2、配偶者と直系尊属は2/3:1/3、配偶者と兄弟姉妹は3/4:1/4となります。家系図Naviでは家族構成を入力するだけで自動計算できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "相続税の基礎控除はいくらですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "相続税の基礎控除は「3,000万円 + 600万円 × 法定相続人の数」です（相続税法15条）。法定相続人が3名の場合、4,800万円が非課税となります。家系図Naviでは国税庁公表の速算表を用いて正確な概算税額を自動計算します。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "遺留分とは何ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "遺留分とは、配偶者・子・直系尊属に法律上保証された最低限の相続割合です（民法1042条）。総体的遺留分は直系尊属のみの場合1/3、それ以外は1/2です。兄弟姉妹には遺留分がありません。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "小規模宅地等の特例とは何ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "小規模宅地等の特例は、相続した土地の評価額を大幅に減額できる制度です（租税特別措置法69条の4）。特定居住用宅地（自宅）は330㎡まで80%減額、特定事業用宅地は400㎡まで80%減額、貸付事業用宅地は200㎡まで50%減額されます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "入力した個人情報はどこかに保存されますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "家系図Naviはゼロ・リテンション設計を採用しています。入力された家族構成・資産情報はブラウザのセッション内のみで処理され、サーバーには一切保存されません。ブラウザを閉じた時点でデータは完全に消去されます。"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: WebSite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "家系図Navi",
+    "url": "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/",
+    "description": "無料の相続・事業承継シミュレーター",
+    "inLanguage": "ja",
+    "publisher": {"@type": "Person", "name": "DrumNavi"}
+  }
+  </script>
+
+  <!-- sitemap -->
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+
+  <style>
+    :root {
+      --green: #27AE60;
+      --dark: #1a1a2e;
+      --light-bg: #f8fdf9;
+      --text: #2c3e50;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: var(--light-bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    header {
+      background: linear-gradient(135deg, var(--green), #16A085);
+      color: white;
+      padding: 3rem 1.5rem 2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: .5rem; }
+    header p { font-size: 1.1rem; opacity: .9; max-width: 600px; margin: 0 auto; }
+    .cta {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: .9rem 2.5rem;
+      background: white;
+      color: var(--green);
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 50px;
+      text-decoration: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,.15);
+      transition: transform .2s;
+    }
+    .cta:hover { transform: translateY(-2px); }
+    main { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem; }
+    h2 { font-size: 1.5rem; color: var(--green); margin: 2.5rem 0 1rem; border-left: 4px solid var(--green); padding-left: .8rem; }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.2rem;
+      margin: 1rem 0;
+    }
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      border-top: 3px solid var(--green);
+    }
+    .feature-card h3 { font-size: 1rem; margin-bottom: .4rem; }
+    .feature-card p { font-size: .9rem; color: #555; }
+    .faq { margin: 1rem 0; }
+    .faq details {
+      background: white;
+      border-radius: 8px;
+      margin-bottom: .8rem;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .faq summary { font-weight: 600; cursor: pointer; list-style: none; }
+    .faq summary::before { content: "Q. "; color: var(--green); }
+    .faq p { margin-top: .6rem; font-size: .95rem; color: #444; }
+    .badges { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+    .badge {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .85rem;
+      color: #555;
+    }
+    .disclaimer {
+      background: #fff8e1;
+      border-left: 4px solid #f39c12;
+      padding: 1rem 1.2rem;
+      border-radius: 4px;
+      font-size: .9rem;
+      margin: 2rem 0;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: .85rem;
+      color: #888;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌳 家系図Navi</h1>
+  <p>相続・事業承継シミュレーター<br>家族構成を入力するだけで、法定相続分・相続税・遺留分をAIが自動診断</p>
+  <a class="cta" href="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/" rel="noopener">
+    無料で試す →
+  </a>
+</header>
+
+<main>
+
+  <h2>主な機能</h2>
+  <div class="features">
+    <div class="feature-card">
+      <h3>法定相続分の自動計算</h3>
+      <p>民法900条に準拠。代襲相続・半血兄弟・特別養子・相続放棄など複雑なケースも対応。国税庁公表値で精度検証済み。</p>
+    </div>
+    <div class="feature-card">
+      <h3>相続税概算（無料）</h3>
+      <p>相続税法16条の正規ロジック（法定相続分按分→速算表→合算）で計算。配偶者控除・生命保険非課税枠も反映。</p>
+    </div>
+    <div class="feature-card">
+      <h3>遺留分の計算</h3>
+      <p>民法1042条に準拠した遺留分を自動計算。兄弟姉妹には遺留分がないなどの例外処理も対応。</p>
+    </div>
+    <div class="feature-card">
+      <h3>小規模宅地等の特例</h3>
+      <p>特定居住用（80%減/330㎡）・特定事業用（80%減/400㎡）・貸付事業用（50%減/200㎡）の概算節税額を計算。</p>
+    </div>
+    <div class="feature-card">
+      <h3>二次相続シミュレーション</h3>
+      <p>配偶者への取得割合（0%/50%/100%）別に一次・二次相続の合計税額を比較。最適な分割方法を検討できます。</p>
+    </div>
+    <div class="feature-card">
+      <h3>事業承継リスクAI診断</h3>
+      <p>自社株の分散リスク・配偶者集中リスクをAIが評価。最優先で検討すべき対策を提示します。</p>
+    </div>
+    <div class="feature-card">
+      <h3>生前贈与シミュレーション</h3>
+      <p>暦年贈与（年110万非課税）vs 相続時精算課税（2500万非課税）の節税効果を比較。2024年改正7年持戻しを反映。</p>
+    </div>
+    <div class="feature-card">
+      <h3>自筆証書遺言ドラフト生成</h3>
+      <p>AIが自筆証書遺言の雛形テンプレートを生成。民法968条の必須要件・法務局保管制度の説明付き。</p>
+    </div>
+  </div>
+
+  <h2>対応している法律ケース</h2>
+  <div class="badges">
+    <span class="badge">配偶者＋子（民法900条）</span>
+    <span class="badge">代襲相続（民法887条）</span>
+    <span class="badge">半血兄弟（民法900条4号）</span>
+    <span class="badge">特別養子縁組（民法817条）</span>
+    <span class="badge">相続放棄（民法939条）</span>
+    <span class="badge">同時死亡推定（民法32条の2）</span>
+    <span class="badge">遺留分（民法1042条）</span>
+    <span class="badge">配偶者居住権（民法1028条）</span>
+    <span class="badge">国際相続の警告</span>
+    <span class="badge">相続税法15条（養子算入制限）</span>
+    <span class="badge">租税特別措置法69条の4</span>
+    <span class="badge">暦年贈与7年持戻し（2024年改正）</span>
+  </div>
+
+  <h2>よくある質問</h2>
+  <div class="faq">
+    <details>
+      <summary>法定相続分とは何ですか？</summary>
+      <p>法定相続分とは、民法900条に定められた相続人ごとの相続割合です。配偶者と子がいる場合は各1/2、配偶者と直系尊属は2/3:1/3、配偶者と兄弟姉妹は3/4:1/4となります。家系図Naviでは家族構成を入力するだけで自動計算できます。</p>
+    </details>
+    <details>
+      <summary>相続税の基礎控除はいくらですか？</summary>
+      <p>相続税の基礎控除は「3,000万円 + 600万円 × 法定相続人の数」です（相続税法15条）。例えば法定相続人が3名の場合、4,800万円が非課税となります。家系図Naviでは国税庁公表の速算表を用いて正確な概算税額を自動計算します。</p>
+    </details>
+    <details>
+      <summary>遺留分とは何ですか？</summary>
+      <p>遺留分とは、配偶者・子・直系尊属に法律上保証された最低限の相続割合です（民法1042条）。総体的遺留分は直系尊属のみの場合1/3、それ以外は1/2です。兄弟姉妹には遺留分がありません。</p>
+    </details>
+    <details>
+      <summary>小規模宅地等の特例とは何ですか？</summary>
+      <p>小規模宅地等の特例は、相続した土地の評価額を大幅に減額できる制度です（租税特別措置法69条の4）。特定居住用宅地（自宅）は330㎡まで80%減額、特定事業用宅地は400㎡まで80%減額、貸付事業用宅地は200㎡まで50%減額されます。</p>
+    </details>
+    <details>
+      <summary>入力した個人情報はどこかに保存されますか？</summary>
+      <p>家系図Naviはゼロ・リテンション設計を採用しています。入力された家族構成・資産情報・音声データは、ブラウザのセッション内のみで処理され、サーバーには一切保存されません。ブラウザを閉じた時点でデータは完全に消去されます。</p>
+    </details>
+    <details>
+      <summary>無料で使えますか？</summary>
+      <p>はい、完全無料でご利用いただけます。登録・ログイン不要で、家族構成を入力するだけで相続シミュレーションを実行できます。</p>
+    </details>
+  </div>
+
+  <div class="disclaimer">
+    <strong>免責事項：</strong>本ツールの計算結果は一般的なシミュレーションであり、法的な助言ではありません。具体的な判断・手続きは弁護士・税理士・司法書士等の専門家にご相談ください。本ツールは弁護士法72条（非弁活動の禁止）に抵触しないよう設計されています。
+  </div>
+
+</main>
+
+<footer>
+  <p>© 2026 DrumNavi — 家系図Navi / Family Tree Guide</p>
+  <p style="margin-top:.5rem"><a href="https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/" style="color:var(--green)">アプリを開く</a></p>
+</footer>
+
+<!-- アプリへ即リダイレクト（SEOクロール後） -->
+<script>
+  // Googlebotはリダイレクトしない（SEOクロール優先）
+  if (!/bot|crawler|spider|googlebot/i.test(navigator.userAgent)) {
+    window.location.replace('https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/');
+  }
+</script>
+
+</body>
+</html>
