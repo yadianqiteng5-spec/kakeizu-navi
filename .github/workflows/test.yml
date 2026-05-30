@@ -98,6 +98,8 @@ jobs:
     steps:
       - name: 通知ペイロード作成
         id: payload
+        env:
+          COMMIT_FULL: ${{ github.event.head_commit.message }}
         run: |
           if [ "${{ needs.test.result }}" = "success" ] && [ "${{ needs.lint.result }}" = "success" ]; then
             STATUS="✅ 成功"
@@ -108,10 +110,16 @@ jobs:
             COLOR="danger"
             HEX="F85149"
           fi
-          echo "status=$STATUS" >> $GITHUB_OUTPUT
-          echo "color=$COLOR"   >> $GITHUB_OUTPUT
-          echo "hex=$HEX"       >> $GITHUB_OUTPUT
-          echo "commit_msg=$(git log -1 --pretty=%s 2>/dev/null || echo '${{ github.event.head_commit.message }}')" >> $GITHUB_OUTPUT
+          # コミットメッセージは1行目だけ・最大200文字に切り詰め（複数行で$GITHUB_OUTPUTが壊れるのを防ぐ）
+          COMMIT_MSG=$(printf '%s' "$COMMIT_FULL" | head -n 1 | cut -c 1-200)
+          # ダブルクォートだけエスケープ（後段のcurl JSONで使うため）
+          COMMIT_MSG=${COMMIT_MSG//\"/\\\"}
+          {
+            echo "status=$STATUS"
+            echo "color=$COLOR"
+            echo "hex=$HEX"
+            echo "commit_msg=$COMMIT_MSG"
+          } >> "$GITHUB_OUTPUT"
 
       # ── Slack通知（オプション: Secrets に SLACK_WEBHOOK_URL を設定すると有効化）──
       - name: Slack通知
