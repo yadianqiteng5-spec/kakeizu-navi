@@ -1860,16 +1860,19 @@ st.markdown(
 st.markdown(
     """<div style="text-align:center;margin:18px 0 6px 0;padding:14px;background:#f8fdf9;
                   border-radius:8px;border:1px solid #d4e9d8;">
-    <div style="font-weight:600;color:#27AE60;margin-bottom:6px;">📚 相続・事業承継ガイド（19記事公開中）</div>
+    <div style="font-weight:600;color:#27AE60;margin-bottom:6px;">📚 相続・事業承継ガイド（34記事+用語集40語 公開中）</div>
     <div style="font-size:13px;line-height:1.8;">
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/inheritance-procedure/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">相続手続きの全体像</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/inheritance-tax/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">相続税の基礎控除</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/will-template/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">自筆証書遺言の書き方</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/business-succession/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">事業承継のリスク</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/post-death-timeline/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">死後手続きタイムライン</a>・
-    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/family-trust/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">家族信託</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/family-trust/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">家族信託</a>・
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/endlife-checklist/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">終活チェックリスト</a>
     <br>
-    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/guides/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;">▶ 全19記事を見る</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/guides/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">▶ 全34記事を見る</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/glossary/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📖 用語集（40語）</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/about/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">ℹ️ About</a>
     </div>
     </div>""",
     unsafe_allow_html=True,
