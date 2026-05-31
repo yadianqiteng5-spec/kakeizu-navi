@@ -1872,6 +1872,7 @@ st.markdown(
     <br>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/guides/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">▶ 全39記事を見る</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/table-inheritance-tax/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📊 早見表</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/cases/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📁 ケース集</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/glossary/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📖 用語集（40語）</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/about/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">ℹ️ About</a>
     </div>
