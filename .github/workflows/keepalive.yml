@@ -1,0 +1,79 @@
+name: Keep Streamlit App Awake
+
+# Streamlit Community Cloud は一定時間アクセスがないとスリープする。
+# 単純なHTTP pingでは起きないため、Playwrightで実際にアプリを開き、
+# スリープ画面が出ていれば "Yes, get this app back up!" を自動クリックして起こす。
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # 4時間ごと（UTC）。間隔を変えたい場合はここを編集。
+  workflow_dispatch:          # 手動実行も可能
+
+# 同時実行を防ぐ
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: アプリを起こす
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Playwright をインストール
+        run: |
+          pip install --quiet playwright
+          python -m playwright install chromium
+
+      - name: アプリを開いて起こす
+        env:
+          APP_URL: "https://kakeizu-navi-3joa5l78sjkams2axwbxix.streamlit.app/"
+        run: |
+          python - <<'PY'
+          import os, sys, time
+          from playwright.sync_api import sync_playwright
+
+          url = os.environ["APP_URL"]
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page()
+              page.goto(url, wait_until="domcontentloaded", timeout=60000)
+              time.sleep(5)
+
+              # スリープ画面の起こすボタンを探す（複数の表記に対応）
+              woke = False
+              for sel in [
+                  'button:has-text("get this app back up")',
+                  'button:has-text("Yes, get this app back up")',
+                  'text=get this app back up',
+              ]:
+                  try:
+                      btn = page.locator(sel)
+                      if btn.count() > 0:
+                          btn.first.click(timeout=5000)
+                          woke = True
+                          print("スリープ検出 → 起こすボタンをクリックしました")
+                          break
+                  except Exception:
+                      pass
+
+              if woke:
+                  # 起動完了まで待つ
+                  time.sleep(40)
+              else:
+                  print("アプリは起動中（スリープ画面なし）")
+
+              # Streamlit本体が読み込まれたか軽く確認
+              try:
+                  page.wait_for_selector('[data-testid="stApp"], .stApp, #root', timeout=30000)
+                  print("Streamlitアプリの読み込みを確認")
+              except Exception:
+                  print("（読み込み確認はタイムアウト。起動処理は実行済み）")
+
+              browser.close()
+          print("keep-alive 完了")
+          PY
