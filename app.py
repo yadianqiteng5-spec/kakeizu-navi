@@ -389,6 +389,7 @@ def _init_session():
         "ai_raw_result": None,
         "edit_state":   None,
         "audio_transcript": "",
+        "hearing":      None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -444,6 +445,135 @@ def _build_ft_from_edit_state():
                 adoption = r.get("adoption_type", "biological")
                 ft.add_parent_child(p1, p2, adoption_type=adoption)
     return ft
+
+
+def _render_hearing(remaining_calls):
+    """対話ヒアリング: 1問ずつ質問し、音声/テキスト/選択で回答 → 家系図を自動構築"""
+    from core.hearing import build_question_list, assemble
+
+    if st.session_state.get("hearing") is None:
+        st.session_state.hearing = {"answers": {}, "idx": 0}
+    hs = st.session_state.hearing
+    answers = hs["answers"]
+
+    qlist = build_question_list(answers)
+    total = len(qlist)
+    idx = min(hs["idx"], total)  # クランプ
+
+    st.caption(
+        "アプリからの質問に、**音声・テキスト・選択**のいずれかで順番に答えるだけ。"
+        "難しい知識は不要です。あとは自動で家系図を組み立てて診断します。"
+    )
+
+    # ── 全問終了 → 確認＆診断へ ──
+    if idx >= total:
+        st.success("✅ ヒアリングが完了しました！内容を確認して診断に進みましょう。")
+        n_persons = len(assemble(answers)["persons"])
+        st.info(f"入力内容から **{n_persons}名** の家族構成を組み立てます。")
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if st.button("📊 この内容で診断する", type="primary", use_container_width=True):
+                data = assemble(answers)
+                if not data["persons"]:
+                    st.error("家族情報が不足しています。最初からやり直してください。")
+                else:
+                    st.session_state.ai_raw_result = data
+                    st.session_state.edit_state = None
+                    st.session_state.step = 1
+                    st.rerun()
+        with col2:
+            if st.button("🔄 最初からやり直す", use_container_width=True):
+                st.session_state.hearing = {"answers": {}, "idx": 0}
+                st.rerun()
+        return
+
+    # ── 進捗 ──
+    st.progress((idx) / max(total, 1), text=f"質問 {idx + 1} / 約{total}問")
+
+    q = qlist[idx]
+    qkey = q["key"]
+    skey = f"hin_{qkey}"
+    st.markdown(f"#### Q{idx + 1}. {q['q']}")
+    if q.get("help"):
+        st.caption(q["help"])
+
+    qtype = q["type"]
+    answer_value = None
+
+    if qtype == "text":
+        # 音声で答えるオプション
+        with st.expander("🎤 音声で答える（クリックで録音）"):
+            if remaining_calls > 0:
+                try:
+                    audio = st.audio_input("録音して話す", key=f"haud_{qkey}", label_visibility="collapsed")
+                except AttributeError:
+                    audio = None
+                    st.caption("音声入力には Streamlit 1.36+ が必要です。テキストでご回答ください。")
+                if audio is not None:
+                    if st.button("📝 文字起こしして回答欄に入れる", key=f"htr_{qkey}"):
+                        from core.gemini_client import transcribe_audio
+                        with st.spinner("Geminiが文字起こし中..."):
+                            t = transcribe_audio(audio.getvalue(), getattr(audio, "type", None) or "audio/wav")
+                        if t:
+                            st.session_state[skey] = t
+                            st.session_state.llm_count += 1
+                            st.rerun()
+                        else:
+                            st.error("文字起こしに失敗しました。もう一度お試しいただくか、テキストで入力してください。")
+            else:
+                st.caption("AI利用の上限に達したため、音声は使えません。テキストでご入力ください。")
+
+        st.session_state.setdefault(skey, str(answers.get(qkey, "")))
+        if q.get("multiline"):
+            answer_value = st.text_area("回答", key=skey, height=110,
+                                        placeholder=q.get("placeholder", ""), label_visibility="collapsed")
+        else:
+            answer_value = st.text_input("回答", key=skey,
+                                         placeholder=q.get("placeholder", ""), label_visibility="collapsed")
+
+    elif qtype == "choice":
+        opts = q["options"]
+        prev = answers.get(qkey)
+        default_idx = opts.index(prev) if prev in opts else 0
+        answer_value = st.radio("回答", opts, index=default_idx,
+                                key=f"hrad_{qkey}", horizontal=True, label_visibility="collapsed")
+
+    elif qtype == "number":
+        unit = q.get("unit", "")
+        label = f"回答（{unit}）" if unit else "回答"
+        step = 100 if unit == "万円" else 1
+        prev = answers.get(qkey, 0)
+        try:
+            prev = int(prev)
+        except (TypeError, ValueError):
+            prev = 0
+        answer_value = st.number_input(
+            label, min_value=int(q.get("min", 0)), max_value=int(q.get("max", 1000000)),
+            value=prev, step=step, key=f"hnum_{qkey}",
+        )
+
+    # ── ナビゲーション ──
+    st.markdown("")
+    nav1, nav2, nav3 = st.columns([1, 1, 2])
+    with nav1:
+        if st.button("← 戻る", use_container_width=True, disabled=(idx == 0)):
+            hs["idx"] = max(0, idx - 1)
+            st.rerun()
+    with nav2:
+        is_last_likely = (idx + 1 >= total)
+        if st.button("次へ →" if not is_last_likely else "回答を確定 →",
+                     type="primary", use_container_width=True):
+            # 必須チェック（任意質問は空欄OK）
+            if qtype == "text" and not q.get("optional") and not str(answer_value).strip():
+                st.warning("回答を入力してください（音声でも入力できます）。")
+            else:
+                answers[qkey] = answer_value
+                hs["idx"] = idx + 1
+                st.rerun()
+    with nav3:
+        if st.button("🔄 最初からやり直す", use_container_width=True):
+            st.session_state.hearing = {"answers": {}, "idx": 0}
+            st.rerun()
 
 
 def _sidebar():
@@ -525,11 +655,15 @@ st.divider()
 if st.session_state.step == 0:
     st.subheader("📝 Step 1 ｜ 家族構成を入力")
 
-    tab_text, tab_image, tab_audio = st.tabs([
-        "💬 テキスト入力",
+    tab_hearing, tab_text, tab_image, tab_audio = st.tabs([
+        "💬 質問に答えるだけ（おすすめ）",
+        "✍️ まとめてテキスト入力",
         "📷 画像アップロード",
         "🎤 音声入力（2ステップ：文字起こし→解析）",
     ])
+
+    with tab_hearing:
+        _render_hearing(remaining_calls)
 
     with tab_text:
         st.caption("家族の状況を自由に記述してください。AIが家族関係を自動解析します。")
