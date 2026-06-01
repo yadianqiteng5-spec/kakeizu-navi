@@ -732,6 +732,7 @@ if st.session_state.step == 0:
                 is_api_available,
                 extract_family_from_text,
                 extract_family_from_image,
+                get_last_error,
             )
 
             if not is_api_available():
@@ -764,11 +765,17 @@ if st.session_state.step == 0:
                 st.session_state.step = 1
                 st.rerun()
             else:
+                err = get_last_error()
                 st.error(
                     "解析に失敗しました。以下をお試しください:\n"
                     "- テキストをより具体的に記述する\n"
                     "- 画像を鮮明なものに変える\n"
                     "- テキストと画像を両方入力する"
+                )
+                if err:
+                    st.caption(f"🔍 エラー詳細（管理者向け）: {err}")
+                st.info(
+                    "API設定の確認が必要な場合は「デモデータで体験」で全機能をお試しいただけます。"
                 )
 
 

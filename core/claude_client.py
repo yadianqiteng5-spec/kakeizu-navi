@@ -3,6 +3,11 @@ Claude API連携モジュール
 - テキスト・画像からの家族構成抽出
 - 相続・事業承継診断
 - セキュリティ: データは学習に利用されない旨をプロンプトに明記
+
+【堅牢性の設計】
+- モデルIDは st.secrets / 環境変数 "ANTHROPIC_MODEL" で上書き可能
+- 既定は複数候補のフォールバックチェーン（無効なモデルIDでも次を試す）
+- エラーは握り潰さず last_error に保持し、UIで実原因を表示できるようにする
 """
 import os
 import json
@@ -14,19 +19,25 @@ import base64
 import anthropic
 
 
-def _get_api_key() -> Optional[str]:
-    """st.secrets → 環境変数 の順で ANTHROPIC_API_KEY を取得"""
+# ─────────────────────────────────────────────────────────────
+# 設定取得（st.secrets → 環境変数）
+# ─────────────────────────────────────────────────────────────
+def _get_secret(name: str) -> Optional[str]:
     try:
         import streamlit as st
         try:
-            val = st.secrets.get("ANTHROPIC_API_KEY")
+            val = st.secrets.get(name)
             if val:
                 return val
         except Exception:
             pass
     except Exception:
         pass
-    return os.environ.get("ANTHROPIC_API_KEY")
+    return os.environ.get(name)
+
+
+def _get_api_key() -> Optional[str]:
+    return _get_secret("ANTHROPIC_API_KEY")
 
 
 def _get_client() -> Optional[anthropic.Anthropic]:
@@ -40,6 +51,98 @@ def is_api_available() -> bool:
     return bool(_get_api_key())
 
 
+# ─────────────────────────────────────────────────────────────
+# モデル解決（上書き可能・フォールバックチェーン）
+# ─────────────────────────────────────────────────────────────
+# secrets/env の ANTHROPIC_MODEL があれば最優先。無くても下記候補を順に試す。
+_FALLBACK_MODELS = [
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-5-20250929",
+    "claude-3-7-sonnet-latest",
+    "claude-3-5-sonnet-latest",
+    "claude-3-5-sonnet-20241022",
+]
+
+_working_model: Optional[str] = None   # 一度成功したモデルを再利用（無駄な探索を避ける）
+last_error: Optional[str] = None       # 直近のエラー（UI表示用）
+
+
+def _candidate_models() -> list:
+    override = _get_secret("ANTHROPIC_MODEL")
+    models = []
+    if override:
+        models.append(override)
+    models.extend(_FALLBACK_MODELS)
+    # 重複除去（順序保持）
+    seen, out = set(), []
+    for m in models:
+        if m and m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+def get_last_error() -> Optional[str]:
+    return last_error
+
+
+def _create_message(client: anthropic.Anthropic, **kwargs):
+    """
+    モデル候補を順に試して messages.create を実行する。
+    - モデルが見つからない(404)等は次の候補へフォールバック
+    - 一度成功したモデルは _working_model に記憶して再利用
+    - 全滅したら最後の例外を送出（呼び出し側で last_error に記録）
+    """
+    global _working_model, last_error
+
+    # 成功実績モデルを先頭に、その後ろに全候補（重複除去）。
+    # キャッシュ済みモデルが失敗しても同一呼び出し内で他候補へフォールバックする。
+    ordered, seen = [], set()
+    for m in ([_working_model] if _working_model else []) + _candidate_models():
+        if m and m not in seen:
+            seen.add(m)
+            ordered.append(m)
+    models = ordered
+    last_exc = None
+
+    for model in models:
+        if not model:
+            continue
+        try:
+            msg = client.messages.create(model=model, **kwargs)
+            _working_model = model      # 成功モデルを記憶
+            last_error = None
+            return msg
+        except anthropic.NotFoundError as e:
+            # モデルIDが無効 → 次の候補へ
+            last_exc = e
+            _working_model = None
+            continue
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
+            # 認証・権限エラーはフォールバックしても無駄
+            last_exc = e
+            break
+        except anthropic.APIStatusError as e:
+            # その他のAPIエラー（レート制限・過負荷等）は次候補を試す価値あり
+            last_exc = e
+            continue
+        except Exception as e:
+            last_exc = e
+            break
+
+    last_error = f"{type(last_exc).__name__}: {last_exc}" if last_exc else "不明なエラー"
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("利用可能なモデルがありません")
+
+
+def _parse_json_obj(content: str) -> Optional[dict]:
+    json_match = re.search(r"\{[\s\S]*\}", content)
+    if json_match:
+        return json.loads(json_match.group())
+    return None
+
+
 # この指示をすべてのプロンプトの冒頭に付加する
 _PRIVACY_PREAMBLE = (
     "【重要】ユーザーの個人情報を含む入力です。"
@@ -49,9 +152,11 @@ _PRIVACY_PREAMBLE = (
 
 
 def extract_family_from_text(text: str) -> Optional[dict]:
-    """自然文から家族構成を抽出してJSONで返す"""
+    """自然文から家族構成を抽出してJSONで返す。失敗時は None（原因は get_last_error()）"""
+    global last_error
     client = _get_client()
     if not client:
+        last_error = "ANTHROPIC_API_KEY が未設定です"
         return None
 
     prompt = _PRIVACY_PREAMBLE + f"""以下のテキストから家族関係を抽出してください。
@@ -89,18 +194,19 @@ def extract_family_from_text(text: str) -> Optional[dict]:
 - has_business_shares は自社株・非上場株を保有していれば true"""
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
+        message = _create_message(
+            client,
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}],
         )
         content = message.content[0].text
-        json_match = re.search(r"\{[\s\S]*\}", content)
-        if json_match:
-            return json.loads(json_match.group())
-    except Exception:
-        pass
-    return None
+        result = _parse_json_obj(content)
+        if result is None:
+            last_error = "AIの応答からJSONを抽出できませんでした"
+        return result
+    except Exception as e:
+        last_error = f"{type(e).__name__}: {e}"
+        return None
 
 
 def extract_family_from_image(image_bytes: BytesIO, mime_type: str = "image/jpeg") -> Optional[dict]:
@@ -108,8 +214,10 @@ def extract_family_from_image(image_bytes: BytesIO, mime_type: str = "image/jpeg
     画像から家族構成を抽出してJSONで返す。
     呼び出し側は処理後に image_bytes を明示的に del すること。
     """
+    global last_error
     client = _get_client()
     if not client:
+        last_error = "ANTHROPIC_API_KEY が未設定です"
         return None
 
     image_data = base64.standard_b64encode(image_bytes.getvalue()).decode("utf-8")
@@ -124,8 +232,8 @@ def extract_family_from_image(image_bytes: BytesIO, mime_type: str = "image/jpeg
  is_alive, is_propositus, assets_yen, has_business_shares, notes）"""
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
+        message = _create_message(
+            client,
             max_tokens=2000,
             messages=[{
                 "role": "user",
@@ -143,12 +251,13 @@ def extract_family_from_image(image_bytes: BytesIO, mime_type: str = "image/jpeg
             }],
         )
         content = message.content[0].text
-        json_match = re.search(r"\{[\s\S]*\}", content)
-        if json_match:
-            return json.loads(json_match.group())
-    except Exception:
-        pass
-    return None
+        result = _parse_json_obj(content)
+        if result is None:
+            last_error = "AIの応答からJSONを抽出できませんでした"
+        return result
+    except Exception as e:
+        last_error = f"{type(e).__name__}: {e}"
+        return None
 
 
 def diagnose_succession(
@@ -184,16 +293,15 @@ def diagnose_succession(
 - 相続税の懸念点
 - 専門家への相談推奨内容"""
 
-    # 非弁活動回避: プロンプト制約を追加
     from core.legal_safety import PROMPT_SAFETY_INSTRUCTIONS, with_safety_footer
     prompt = PROMPT_SAFETY_INSTRUCTIONS + "\n\n" + prompt
 
     try:
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
+        message = _create_message(
+            client,
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
         return with_safety_footer(message.content[0].text)
     except Exception as e:
-        return f"診断中にエラーが発生しました: {str(e)}"
+        return f"診断中にエラーが発生しました: {type(e).__name__}: {e}"
