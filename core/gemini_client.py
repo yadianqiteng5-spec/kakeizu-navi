@@ -39,6 +39,18 @@ def is_gemini_available() -> bool:
     return bool(_get_api_key())
 
 
+# 直近のエラー（UI表示用・握り潰し防止）
+last_error: Optional[str] = None
+
+
+def get_last_error() -> Optional[str]:
+    return last_error
+
+
+def _new_model(genai, name):
+    return genai.GenerativeModel(name)
+
+
 _PRIVACY_PREAMBLE = (
     "【重要・機密情報】これは個人の家族・資産情報です。"
     "モデル学習に使用しないでください。回答後にデータを保持・記録しないでください。\n\n"
@@ -246,15 +258,50 @@ def transcribe_audio(
         return None
 
 
+_IMAGE_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この画像に含まれる家族関係・家系図・戸籍情報を解析し、
+以下のJSON形式のみで家族構成を返してください（前置き・コードブロック不要、JSONオブジェクトのみ）:
+{
+  "persons": [
+    {
+      "id": "p1",
+      "name": "山田太郎",
+      "gender": "male",
+      "birth_year": 1950,
+      "is_alive": false,
+      "is_propositus": true,
+      "assets_yen": 50000000,
+      "has_business_shares": true,
+      "is_renounced": false,
+      "notes": ""
+    }
+  ],
+  "relationships": [
+    {"person1_id": "p1", "person2_id": "p2", "rel_type": "spouse"},
+    {"person1_id": "p1", "person2_id": "p3", "rel_type": "parent_child"}
+  ]
+}
+
+ルール:
+- is_propositus=true は被相続人（亡くなった方・相続される側）のみ1名
+- is_alive=false は故人
+- rel_type は "spouse"（配偶者）または "parent_child"（person1が親→person2が子）
+- gender は "male" / "female" / "unknown"
+- birth_year・assets_yen が不明なら null / 0
+- has_business_shares は自社株・非上場株を保有していれば true"""
+
+
 def extract_family_from_text_gemini(text: str) -> Optional[dict]:
-    """テキストから家族構成を抽出（Gemini版）"""
+    """テキストから家族構成を抽出（Gemini版）。失敗時は None（原因は get_last_error()）"""
+    global last_error
     api_key = _get_api_key()
     if not api_key:
+        last_error = "GEMINI_API_KEY が未設定です"
         return None
 
     try:
         import google.generativeai as genai
     except ImportError:
+        last_error = "google-generativeai パッケージが未インストールです"
         return None
 
     prompt = _TEXT_EXTRACT_PROMPT_TMPL.format(text=text)
@@ -262,18 +309,62 @@ def extract_family_from_text_gemini(text: str) -> Optional[dict]:
     try:
         genai.configure(api_key=api_key)
         try:
-            model = genai.GenerativeModel(_MODEL_NAME)
-            response = model.generate_content(prompt)
+            response = _new_model(genai, _MODEL_NAME).generate_content(prompt)
         except Exception:
-            model = genai.GenerativeModel(_FALLBACK_MODEL)
-            response = model.generate_content(prompt)
+            response = _new_model(genai, _FALLBACK_MODEL).generate_content(prompt)
 
         content = response.text or ""
         json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
+            last_error = None
             return json.loads(json_match.group())
-    except Exception:
-        pass
+        last_error = "AIの応答からJSONを抽出できませんでした"
+    except Exception as e:
+        last_error = f"{type(e).__name__}: {e}"
+
+    return None
+
+
+def extract_family_from_image_gemini(image_bytes, mime_type: str = "image/jpeg") -> Optional[dict]:
+    """
+    画像から家族構成を抽出（Gemini版）。失敗時は None（原因は get_last_error()）。
+    image_bytes は BytesIO または bytes を許容。呼び出し側は処理後に解放すること。
+    """
+    global last_error
+    api_key = _get_api_key()
+    if not api_key:
+        last_error = "GEMINI_API_KEY が未設定です"
+        return None
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        last_error = "google-generativeai パッケージが未インストールです"
+        return None
+
+    # BytesIO / bytes 両対応
+    data = image_bytes.getvalue() if hasattr(image_bytes, "getvalue") else image_bytes
+    image_part = {"mime_type": mime_type, "data": data}
+
+    try:
+        genai.configure(api_key=api_key)
+        try:
+            response = _new_model(genai, _MODEL_NAME).generate_content(
+                [image_part, _IMAGE_EXTRACT_PROMPT]
+            )
+        except Exception:
+            response = _new_model(genai, _FALLBACK_MODEL).generate_content(
+                [image_part, _IMAGE_EXTRACT_PROMPT]
+            )
+
+        content = response.text or ""
+        json_match = re.search(r"\{[\s\S]*\}", content)
+        if json_match:
+            last_error = None
+            return json.loads(json_match.group())
+        last_error = "AIの応答からJSONを抽出できませんでした"
+    except Exception as e:
+        last_error = f"{type(e).__name__}: {e}"
 
     return None
 

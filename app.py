@@ -728,33 +728,33 @@ if st.session_state.step == 0:
         if not has_text and not has_image:
             st.error("テキストまたは画像を入力してください。")
         else:
-            from core.claude_client import (
-                is_api_available,
-                extract_family_from_text,
-                extract_family_from_image,
+            from core.gemini_client import (
+                is_gemini_available,
+                extract_family_from_text_gemini,
+                extract_family_from_image_gemini,
                 get_last_error,
             )
 
-            if not is_api_available():
+            if not is_gemini_available():
                 st.error(
-                    "ANTHROPIC_API_KEY が設定されていません。\n"
-                    "環境変数に設定してから再起動するか、「デモデータで体験」をご利用ください。"
+                    "GEMINI_API_KEY が設定されていません。\n"
+                    "Secrets に設定してから再起動するか、「デモデータで体験」をご利用ください。"
                 )
                 st.stop()
 
             result = None
             with st.spinner("AIが家族関係を解析中...（10〜30秒かかる場合があります）"):
-                # テキストから抽出
+                # テキストから抽出（Gemini）
                 if has_text:
                     text_val = st.session_state.get("input_text_area", "")
-                    result = extract_family_from_text(text_val)
+                    result = extract_family_from_text_gemini(text_val)
 
-                # 画像から抽出（テキスト解析が失敗した場合、または画像のみの場合）
+                # 画像から抽出（テキスト解析が失敗した場合、または画像のみの場合・Gemini）
                 if result is None and has_image:
                     ext = uploaded.name.rsplit(".", 1)[-1].lower()
                     mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
                     image_bytes = BytesIO(uploaded.read())   # オンメモリのみ
-                    result = extract_family_from_image(image_bytes, mime)
+                    result = extract_family_from_image_gemini(image_bytes, mime)
                     image_bytes.close()
                     del image_bytes                           # 即時解放
 
