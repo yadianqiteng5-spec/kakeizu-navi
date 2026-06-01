@@ -56,6 +56,15 @@ _SAFETY_SETTINGS = [
 ]
 
 _resolved_model: Optional[str] = None   # 一度解決したモデル名をキャッシュ
+_available_models: list = []            # list_models() で判明した利用可能モデル（診断用）
+
+
+def available_models_str() -> str:
+    """利用可能モデルの一覧文字列（エラー表示・診断用）"""
+    if _available_models:
+        names = [m.split("/")[-1] for m in _available_models]
+        return ", ".join(names[:12])
+    return "(取得できず)"
 
 
 def _pick_model(genai, prefer: Optional[str] = None) -> str:
@@ -66,23 +75,25 @@ def _pick_model(genai, prefer: Optional[str] = None) -> str:
       2. 呼び出し側の希望(prefer)
       3. 新しめのflash系 → 旧flash → 任意のflash → 任意のgenerateContent対応
     """
-    global _resolved_model
+    global _resolved_model, _available_models
     if _resolved_model:
         return _resolved_model
 
     override = _get_secret("GEMINI_MODEL")
+    # 新しめ・現行で有効な可能性が高い順（廃止済みの1.5系は最後）
     prefs = [override, prefer,
-             "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest",
-             "gemini-1.5-flash", "gemini-pro-latest"]
+             "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite",
+             "gemini-flash-latest", "gemini-2.0-flash-001"]
 
     available = []
     try:
         for m in genai.list_models():
             methods = getattr(m, "supported_generation_methods", []) or []
             if "generateContent" in methods:
-                available.append(m.name)   # 例: "models/gemini-1.5-flash"
+                available.append(m.name)   # 例: "models/gemini-2.0-flash"
     except Exception:
         available = []
+    _available_models = available
 
     def find(p):
         if not p:
@@ -107,8 +118,8 @@ def _pick_model(genai, prefer: Optional[str] = None) -> str:
         _resolved_model = available[0]
         return available[0]
 
-    # list_models が取れない場合の最終手段
-    _resolved_model = override or prefer or "gemini-1.5-flash"
+    # list_models が取れない場合の最終手段（廃止済みの1.5系は避け現行系を既定に）
+    _resolved_model = override or "gemini-2.0-flash"
     return _resolved_model
 
 

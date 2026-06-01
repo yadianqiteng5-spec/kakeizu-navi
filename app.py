@@ -774,6 +774,11 @@ if st.session_state.step == 0:
                 )
                 if err:
                     st.caption(f"🔍 エラー詳細（管理者向け）: {err}")
+                    try:
+                        from core.gemini_client import available_models_str
+                        st.caption(f"🧩 このキーで利用可能なモデル: {available_models_str()}")
+                    except Exception:
+                        pass
                 st.info(
                     "API設定の確認が必要な場合は「デモデータで体験」で全機能をお試しいただけます。"
                 )
