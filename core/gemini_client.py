@@ -47,8 +47,75 @@ def get_last_error() -> Optional[str]:
     return last_error
 
 
+# 相続は「死亡」を扱うため、セーフティフィルタの誤ブロックを防ぐ（事実ベースの法律情報）
+_SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
+
+_resolved_model: Optional[str] = None   # 一度解決したモデル名をキャッシュ
+
+
+def _pick_model(genai, prefer: Optional[str] = None) -> str:
+    """
+    APIキーが実際に使えるモデルを list_models() で問い合わせて選ぶ。
+    名前のズレ・モデル廃止で全滅しないための堅牢化。優先順位:
+      1. secrets/env の GEMINI_MODEL
+      2. 呼び出し側の希望(prefer)
+      3. 新しめのflash系 → 旧flash → 任意のflash → 任意のgenerateContent対応
+    """
+    global _resolved_model
+    if _resolved_model:
+        return _resolved_model
+
+    override = _get_secret("GEMINI_MODEL")
+    prefs = [override, prefer,
+             "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest",
+             "gemini-1.5-flash", "gemini-pro-latest"]
+
+    available = []
+    try:
+        for m in genai.list_models():
+            methods = getattr(m, "supported_generation_methods", []) or []
+            if "generateContent" in methods:
+                available.append(m.name)   # 例: "models/gemini-1.5-flash"
+    except Exception:
+        available = []
+
+    def find(p):
+        if not p:
+            return None
+        for a in available:
+            if a == p or a == f"models/{p}" or a.split("/")[-1] == p:
+                return a
+        return None
+
+    for p in prefs:
+        hit = find(p)
+        if hit:
+            _resolved_model = hit
+            return hit
+
+    # 希望に合致しなければ、利用可能なflash系→任意を採用
+    for a in available:
+        if "flash" in a:
+            _resolved_model = a
+            return a
+    if available:
+        _resolved_model = available[0]
+        return available[0]
+
+    # list_models が取れない場合の最終手段
+    _resolved_model = override or prefer or "gemini-1.5-flash"
+    return _resolved_model
+
+
 def _new_model(genai, name):
-    return genai.GenerativeModel(name)
+    """実際に使えるモデルを解決し、安全設定付きで GenerativeModel を返す。"""
+    chosen = _pick_model(genai, prefer=name)
+    return genai.GenerativeModel(chosen, safety_settings=_SAFETY_SETTINGS)
 
 
 _PRIVACY_PREAMBLE = (
@@ -128,11 +195,11 @@ def diagnose_succession_gemini(
     try:
         genai.configure(api_key=api_key)
         try:
-            model = genai.GenerativeModel(_MODEL_NAME)
+            model = _new_model(genai, _MODEL_NAME)
             response = model.generate_content(prompt)
         except Exception:
             # 新モデルが利用不可な場合は安定版にフォールバック
-            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            model = _new_model(genai, _FALLBACK_MODEL)
             response = model.generate_content(prompt)
 
         # 非弁活動回避: 統一フッターを付加
@@ -247,10 +314,10 @@ def transcribe_audio(
         audio_part = {"mime_type": mime_type, "data": audio_bytes}
 
         try:
-            model = genai.GenerativeModel(_MODEL_NAME)
+            model = _new_model(genai, _MODEL_NAME)
             response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
         except Exception:
-            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            model = _new_model(genai, _FALLBACK_MODEL)
             response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
 
         return (response.text or "").strip() or None
@@ -464,10 +531,10 @@ def generate_will_draft_gemini(
     try:
         genai.configure(api_key=api_key)
         try:
-            model = genai.GenerativeModel(_MODEL_NAME)
+            model = _new_model(genai, _MODEL_NAME)
             response = model.generate_content(prompt)
         except Exception:
-            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            model = _new_model(genai, _FALLBACK_MODEL)
             response = model.generate_content(prompt)
         return with_safety_footer(response.text or "")
     except Exception as e:
@@ -497,10 +564,10 @@ def extract_family_from_audio(
         audio_part = {"mime_type": mime_type, "data": audio_bytes}
 
         try:
-            model = genai.GenerativeModel(_MODEL_NAME)
+            model = _new_model(genai, _MODEL_NAME)
             response = model.generate_content([audio_part, _AUDIO_EXTRACT_PROMPT])
         except Exception:
-            model = genai.GenerativeModel(_FALLBACK_MODEL)
+            model = _new_model(genai, _FALLBACK_MODEL)
             response = model.generate_content([audio_part, _AUDIO_EXTRACT_PROMPT])
 
         content = response.text or ""
