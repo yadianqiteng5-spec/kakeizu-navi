@@ -2022,7 +2022,9 @@ st.markdown(
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/glossary/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📖 用語集（40語）</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/about/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">ℹ️ About</a>
     <br>
-    <a href="https://teso-navi.vercel.app/" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 8px;">🔗 姉妹サイト「テソNavi」</a>
+    🔗 姉妹サイト：
+    <a href="https://mirainavi.net/?utm_source=note&utm_medium=article&utm_campaign=brand-story&utm_content=cta_text_bottom" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">ミライNavi</a>｜
+    <a href="https://teso-navi.vercel.app/" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">手相ナビ</a>
     </div>
     </div>""",
     unsafe_allow_html=True,
