@@ -2006,7 +2006,7 @@ st.markdown(
 st.markdown(
     """<div style="text-align:center;margin:18px 0 6px 0;padding:14px;background:#f8fdf9;
                   border-radius:8px;border:1px solid #d4e9d8;">
-    <div style="font-weight:600;color:#27AE60;margin-bottom:6px;">📚 相続・事業承継ガイド（56記事+早見表5本+用語集40語 公開中）</div>
+    <div style="font-weight:600;color:#27AE60;margin-bottom:6px;">📚 相続・事業承継ガイド（68記事+早見表5本+用語集40語 公開中）</div>
     <div style="font-size:13px;line-height:1.8;">
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/inheritance-procedure/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">相続手続きの全体像</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/inheritance-tax/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">相続税の基礎控除</a>・
@@ -2016,7 +2016,7 @@ st.markdown(
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/family-trust/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">家族信託</a>・
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/endlife-checklist/" target="_blank" rel="noopener" style="color:#2980B9;text-decoration:none;margin:0 6px;">終活チェックリスト</a>
     <br>
-    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/guides/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">▶ 全56記事を見る</a>
+    <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/guides/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">▶ 全68記事を見る</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/table-inheritance-tax/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📊 早見表</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/cases/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📁 ケース集</a>
     <a href="https://yadianqiteng5-spec.github.io/kakeizu-navi-lp/glossary/" target="_blank" rel="noopener" style="color:#27AE60;font-weight:600;text-decoration:none;margin:0 8px;">📖 用語集（40語）</a>
