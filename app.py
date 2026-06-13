@@ -35,6 +35,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Streamlit標準UI（Fork/GitHubバッジ・メニュー・フッター）を非表示 ──────────
+# プロダクトとしての見た目を整えるため、Cloudのviewer badgeやツールバーを隠す
+st.markdown(
+    """<style>
+    #MainMenu {visibility: hidden;}
+    [data-testid="stToolbar"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    [class*="viewerBadge"] {display: none !important;}
+    .stDeployButton {display: none !important;}
+    a[href*="streamlit.io/cloud"], a[href*="github.com"][target="_blank"].viewerBadge_link__ {display: none !important;}
+    footer {visibility: hidden; height: 0;}
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 
 # ── PWAアイコン & manifest 注入（デスクトップにインストール時に反映） ────
 def _inject_pwa_assets():
@@ -582,15 +598,16 @@ def _sidebar():
         st.markdown(
             """<div style="background:#27AE60;color:white;padding:6px 10px;
             border-radius:8px;font-size:11px;text-align:center;margin-bottom:8px;">
-            ✅ <b>39ケース</b> 自動テスト済<br>
-            <span style="font-size:10px;opacity:0.9;">民法・相続税法エッジケース対応</span>
+            ✅ <b>民法・相続税法準拠</b>／自動テスト済<br>
+            <span style="font-size:10px;opacity:0.9;">国税庁公表値と一致を確認</span>
             </div>""",
             unsafe_allow_html=True,
         )
         st.progress(
             remaining_calls / MAX_LLM_CALLS,
-            text=f"AI解析残り: **{remaining_calls}/{MAX_LLM_CALLS}** 回",
+            text=f"AI利用の残り: **{remaining_calls}/{MAX_LLM_CALLS}** 回",
         )
+        st.caption("※「AI利用」は家族構成のAI抽出・AI診断・音声文字起こしの回数です。対話/デモ入力や計算には消費しません。")
         if st.session_state.step == 2 and st.session_state.family_tree:
             st.markdown("---")
             if st.button("🔄 最初からやり直す", use_container_width=True):
@@ -602,23 +619,31 @@ def _sidebar():
                 st.rerun()
 
         st.markdown("---")
-        st.markdown("#### 📢 スポンサー広告")
-        _ads = [
-            ("💼 相続専門税理士に相談", "初回無料・全国対応"),
-            ("📋 遺言書作成サポート", "弁護士費用0円〜"),
-            ("🏢 事業承継コンサルティング", "専門家が無料診断"),
-            ("🏦 相続ローン・資金調達", "最短翌日融資"),
+        # ── PR（実広告）：相続テーマと親和性の高い税理士マッチング ──
+        st.markdown(
+            """<div style="font-size:10px;color:#999;letter-spacing:1px;margin-bottom:2px;">PR / 広告</div>
+            <a href="https://h.accesstrade.net/sp/cc?rk=0100npm700otmq" rel="nofollow sponsored"
+               referrerpolicy="no-referrer-when-downgrade" target="_blank">
+            <img src="https://h.accesstrade.net/sp/rr?rk=0100npm700otmq" alt="税理士ドットコム"
+               style="width:100%;height:auto;border-radius:6px;border:1px solid #eee;"></a>""",
+            unsafe_allow_html=True,
+        )
+        # ── 関連ガイド（自サイトへの実リンク・送客） ──
+        st.markdown("###### 📚 相続のお役立ちガイド")
+        _guides = [
+            ("相続の相談先の選び方", "inheritance-consultation"),
+            ("相続税はいくらから？", "inheritance-tax-threshold"),
+            ("相続手続き完全ガイド", "guide-procedure"),
         ]
-        for label, sub in _ads:
-            st.markdown(
-                f"""<div style="background:#f8f9fa;padding:10px 12px;border-radius:8px;
-                border:1px dashed #ccc;margin-bottom:8px;line-height:1.6;">
-                <b style="font-size:13px;">{label}</b><br>
-                <span style="font-size:12px;color:#555;">{sub}</span><br>
-                <span style="font-size:11px;color:#bbb;">▶ 広告プレースホルダー</span>
-                </div>""",
-                unsafe_allow_html=True,
-            )
+        links = " ／ ".join(
+            f'<a href="https://kakeizu.appsnavi.net/{slug}/" target="_blank" '
+            f'rel="noopener" style="color:#16A085;text-decoration:none;">{label}</a>'
+            for label, slug in _guides
+        )
+        st.markdown(
+            f'<div style="font-size:12px;line-height:1.9;">{links}</div>',
+            unsafe_allow_html=True,
+        )
         st.markdown("---")
         st.caption("🔒 入力データはサーバーに一切保存されません。\nブラウザを閉じると即時に消去されます。")
 
@@ -630,15 +655,18 @@ st.title("🌳 家系図Navi")
 st.markdown("**相続・事業承継シミュレーター** ｜ 家族構成を入力するだけで法定相続分と事業承継リスクを診断します。")
 
 # ── 免責事項・同意 ─────────────────────────────────────────────────────────
-with st.expander(
-    "📋 免責事項・プライバシーポリシー（必ずお読みください）",
-    expanded=not st.session_state.consented,
-):
+if not st.session_state.consented:
+    st.info(
+        "本ツールは**一般的なシミュレーション**を無料で提供します（法的・税務的助言ではありません）。"
+        "入力データは**サーバーに保存されません**。詳細は下記をご確認のうえ、チェックを入れて開始してください。"
+    )
+# 詳細な免責は折りたたみ（壁になる長文を初期非表示に）
+with st.expander("📋 免責事項・プライバシーポリシーの全文を読む", expanded=False):
     from core.legal_safety import MAIN_DISCLAIMER_MD
     st.markdown(MAIN_DISCLAIMER_MD)
 
 consented = st.checkbox(
-    "上記の免責事項・プライバシーポリシーを読み、同意した上で利用します",
+    "✅ 上記に同意して利用を開始する（一般的シミュレーション・データ保存なし）",
     value=st.session_state.consented,
 )
 st.session_state.consented = consented
