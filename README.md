@@ -191,7 +191,7 @@ CI/デプロイの通知設定は [`NOTIFICATIONS.md`](./NOTIFICATIONS.md) を�
 
 ## 📜 ライセンス
 
-© 2026 DrumNavi. All rights reserved.
+© 2026 Mirai Navi. All rights reserved.
 
 家系図Navi は ○○Navi シリーズの登録商品です。
 無断複製・商用利用は禁止されています。

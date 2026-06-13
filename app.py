@@ -165,7 +165,7 @@ _JSONLD = {
     "inLanguage": "ja",
     "image": _OGP_IMAGE,
     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "JPY"},
-    "author": {"@type": "Person", "name": "DrumNavi"},
+    "author": {"@type": "Person", "name": "Mirai Navi"},
     "featureList": [
         "法定相続分計算（民法900条準拠）",
         "相続税概算（国税庁速算表使用）",
@@ -284,7 +284,7 @@ _WEBSITE_JSONLD = {
     "url": _OGP_URL,
     "description": _OGP_DESC,
     "inLanguage": "ja",
-    "publisher": {"@type": "Person", "name": "DrumNavi"},
+    "publisher": {"@type": "Person", "name": "Mirai Navi"},
 }
 _WEBSITE_JSONLD_STR = _json_seo.dumps(_WEBSITE_JSONLD, ensure_ascii=False)
 
@@ -298,7 +298,7 @@ st.markdown(
             ['description', `{_OGP_DESC}`],
             ['keywords',    '{_KEYWORDS}'],
             ['robots',      'index, follow'],
-            ['author',      'DrumNavi'],
+            ['author',      'Mirai Navi'],
             ['language',    'Japanese'],
             ['google-site-verification', 'n_AX9yEnS6_rP9FTj8PBBNu9l_w6kFSkYciOUPOMEiM'],
             ['google-site-verification', 'cujMT7Z2DACik_YaEdaBXDYEDLSlb8IoxeWx9OtBf6E'],
