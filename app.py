@@ -619,12 +619,16 @@ def _sidebar():
                 st.rerun()
 
         st.markdown("---")
-        # ── PR（実広告）：相続テーマと親和性の高い税理士マッチング ──
+        # ── PR（実広告）：相続テーマと親和性の高い専門家マッチング ──
         st.markdown(
-            """<div style="font-size:10px;color:#999;letter-spacing:1px;margin-bottom:2px;">PR / 広告</div>
-            <a href="https://h.accesstrade.net/sp/cc?rk=0100npm700otmq" rel="nofollow sponsored"
+            """<div style="font-size:10px;color:#999;letter-spacing:1px;margin-bottom:4px;">PR / 広告</div>
+            <a href="https://h.accesstrade.net/sp/cc?rk=0100p36700ou1t" rel="nofollow sponsored"
                referrerpolicy="no-referrer-when-downgrade" target="_blank">
-            <img src="https://h.accesstrade.net/sp/rr?rk=0100npm700otmq" alt="税理士ドットコム"
+            <img src="https://h.accesstrade.net/sp/rr?rk=0100p36700ou1t" alt="アース司法書士事務所"
+               style="width:100%;height:auto;border-radius:6px;border:1px solid #eee;margin-bottom:8px;"></a>
+            <a href="https://h.accesstrade.net/sp/cc?rk=0100npm700ou1t" rel="nofollow sponsored"
+               referrerpolicy="no-referrer-when-downgrade" target="_blank">
+            <img src="https://h.accesstrade.net/sp/rr?rk=0100npm700ou1t" alt="税理士ドットコム"
                style="width:100%;height:auto;border-radius:6px;border:1px solid #eee;"></a>""",
             unsafe_allow_html=True,
         )
