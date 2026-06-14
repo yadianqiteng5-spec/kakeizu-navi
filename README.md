@@ -41,7 +41,7 @@
 | 機能 | 内容 |
 |---|---|
 | 入力 | テキスト・画像アップロード・音声録音 |
-| AI解析 | Claude（テキスト/画像）／Gemini（音声・診断） |
+| AI解析 | Gemini（テキスト/画像/音声/診断） |
 | 中間編集 | AI抽出結果をユーザーが確認・修正可能 |
 | 家系図描画 | Graphviz による自動レイアウト |
 | 法定相続分計算 | 無限代襲・半血兄弟・直系尊属の繰り上がり・代襲（甥姪まで）対応 |
@@ -113,7 +113,7 @@
 ## 🛠 技術スタック
 
 - **Frontend/Backend**: Streamlit (Python 3.11+)
-- **AI**: Anthropic Claude API（テキスト/画像）／Google Gemini API（音声/診断）
+- **AI**: Google Gemini API（家族抽出・音声文字起こし・診断・遺言書生成）
 - **可視化**: Graphviz（家系図）、Plotly（相続分円グラフ）
 - **PDF**: reportlab + 組み込みCIDフォント
 
@@ -179,7 +179,6 @@ CI/デプロイの通知設定は [`NOTIFICATIONS.md`](./NOTIFICATIONS.md) を�
 ├── core/
 │   ├── family_tree.py           # データモデル（Person, Relationship）
 │   ├── inheritance.py           # 法定相続分・遺留分・相続税計算
-│   ├── claude_client.py         # Claude API 連携
 │   ├── gemini_client.py         # Gemini API 連携（音声・診断）
 │   ├── pdf_export.py            # PDF レポート出力
 │   └── legal_safety.py          # 非弁活動回避モジュール

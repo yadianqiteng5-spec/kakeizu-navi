@@ -1,0 +1,223 @@
+﻿
+===================== 2026-06-06 08:48:24 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 縲・024蟷ｴ鄒ｩ蜍吝喧縲醍嶌邯夂匳險倥・閾ｪ蛻・〒縺ｧ縺阪ｋ・溷ｿ・ｦ∵嶌鬘槭→雋ｻ逕ｨ縲∫筏隲区婿豕輔ｒ蠕ｹ蠎戊ｧ｣隱ｬ
+  霑ｽ蜉: 33-inheritance-registration-diy.html
+逕滓・荳ｭ: 驕ｺ險蝓ｷ陦瑚・→縺ｯ・滄∈莉ｻ譁ｹ豕輔∝ｽｹ蜑ｲ縲∝ｱ驟ｬ縺ｾ縺ｧ繝励Ο縺瑚ｧ｣隱ｬ縲舌ヨ繝ｩ繝悶Ν蝗樣∩縺ｮ骰ｵ縲・
+  霑ｽ蜉: 34-yuigon-shikkosha-kaisetsu.html
+逕滓・荳ｭ: 隕ｪ縺瑚ｪ咲衍逞・↓縺ｪ縺｣縺溘ｉ・滓・蟷ｴ蠕瑚ｦ句宛蠎ｦ縺ｮ蛻ｩ逕ｨ繝｡繝ｪ繝・ヨ繝ｻ繝・Γ繝ｪ繝・ヨ縺ｨ謇狗ｶ壹″
+  霑ｽ蜉: 35-ninchisho-seinenkouken-guide.html
+
+逕滓・螳御ｺ・ 3譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+
+===================== 2026/06/06  8:50:18.29 =====================
+AIに新規テーマを3本提案させています...
+生成中: 「デジタル遺品」の整理は生前がカギ？SNSや仮想通貨の相続手続きと注意点
+  追加: 36-digital-ihin-seizen.html
+生成中: 相続税の税務調査はなぜ来る？対策と準備、指摘されやすいポイントを解説
+  追加: 37-souzokutax-chousa-taisaku.html
+生成中: 遺産分割協議がまとまらない時にすべきこと—調停・審判の手続きと費用を解説
+  スキップ（Gemini APIエラー 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex）
+
+生成完了: 2本を manifest に追加しました。
+→ 公開するには: python post_to_livedoor.py --publish
+（公開済みのためスキップ: 35本）
+ブログ: infinity_peace24 / 新規対象: 2本 / モード: 公開
+
+OK [1/2] デジタル遺品」の整理は生前がカギ？SNSや仮想通貨の相続手続きと   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31069439
+OK [2/2] 相続税の税務調査はなぜ来る？対策と準備、指摘されやすいポイントを   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31069440
+
+完了: 2/2 成功（公開）
+
+===================== 2026-06-06 10:51:10 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 驕ｺ逕｣蛻・牡蜊碑ｭｰ縺ｧ謠峨ａ繧句次蝗縺ｨ蟇ｾ蜃ｦ豕包ｽ懷ｼ∬ｭｷ螢ｫ縺ｫ萓晞ｼ縺吶ｋ繧ｿ繧､繝溘Φ繧ｰ繧りｧ｣隱ｬ
+  霑ｽ蜉: 38-isan-bunkatsu-kyougi-momeru-genin-taishohou.html
+逕滓・荳ｭ: 豁ｻ莠｡騾閨ｷ驥代・蜉溷感驥代・逶ｸ邯夂ｨ弱′縺九°繧具ｼ滄撼隱ｲ遞取棧縺ｨ險育ｮ玲婿豕輔ｒ蠕ｹ蠎戊ｧ｣隱ｬ
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+逕滓・荳ｭ: 迢ｬ霄ｫ閠・・逶ｸ邯壹〒蝗ｰ繧峨↑縺・◆繧√↓・憺⊆險譖ｸ縺ｮ譖ｸ縺肴婿縺九ｉ逕溷燕雍井ｸ弱∪縺ｧ蠕ｹ蠎戊ｧ｣隱ｬ
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 37譛ｬ・・
+繝悶Ο繧ｰ: infinity_peace24 / 譁ｰ隕丞ｯｾ雎｡: 1譛ｬ / 繝｢繝ｼ繝・ 蜈ｬ髢・
+
+OK [1/1] 驕ｺ逕｣蛻・牡蜊碑ｭｰ縺ｧ謠峨ａ繧句次蝗縺ｨ蟇ｾ蜃ｦ豕包ｽ懷ｼ∬ｭｷ螢ｫ縺ｫ萓晞ｼ縺吶ｋ繧ｿ繧､繝溘Φ繧ｰ繧りｧ｣   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31069822
+
+螳御ｺ・ 1/1 謌仙粥・亥・髢具ｼ・
+
+
+===================== 2026-06-06 12:51:11 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 遨ｺ縺榊ｮｶ繧堤嶌邯壹＠縺溘ｉ縺ｩ縺・☆繧具ｼ溽ｶｭ謖∬ｲｻ縲∝｣ｲ蜊ｴ縲∫ｨ朱≡縺ｾ縺ｧ螳悟・繧ｬ繧､繝・
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+逕滓・荳ｭ: 逶ｸ邯壹〒縲悟ｯ・ｸ主・縲阪ｒ荳ｻ蠑ｵ縺吶ｋ縺ｫ縺ｯ・溽音蛻･蜿礼寢縺ｨ縺ｮ驕輔＞縺ｨ謠峨ａ縺ｪ縺・◆繧√・繝昴う繝ｳ繝・
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+逕滓・荳ｭ: 譛ｪ荳雁ｴ譬ｪ蠑上・逶ｸ邯夂ｨ手ｩ穂ｾ｡縺ｯ縺ｩ縺・☆繧具ｼ溯ｨ育ｮ玲婿豕輔→遽遞主ｯｾ遲・
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+
+逕滓・螳御ｺ・ 0譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 38譛ｬ・・
+譁ｰ隕上・謚慕ｨｿ蟇ｾ雎｡縺ｯ縺ゅｊ縺ｾ縺帙ｓ・医☆縺ｹ縺ｦ蜈ｬ髢区ｸ医∩・峨・
+
+
+===================== 2026-06-06 14:51:11 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 縲悟悄蝨ｰ繝ｻ蟒ｺ迚ｩ繝ｻ譬ｪ蠑上咲嶌邯夊ｲ｡逕｣縺ｮ隧穂ｾ｡鬘阪・縺ｩ縺・ｱｺ縺ｾ繧具ｼ溯ｨ育ｮ玲婿豕輔→遽遞弱・繝昴う繝ｳ繝・
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+逕滓・荳ｭ: 逶ｸ邯壻ｺｺ縺瑚ｪｰ繧ゅ＞縺ｪ縺・→縺ｩ縺・↑繧具ｼ溷嵜縺ｮ雋｡逕｣縺ｫ縺ｪ繧九・繧帝亟縺千函蜑榊ｯｾ遲悶→謇狗ｶ壹″
+  霑ｽ蜉: 39-sozokunin-inai-koku-zaisan-seizentaisaku.html
+逕滓・荳ｭ: 驕ｺ險譖ｸ縺瑚ｦ九▽縺九▲縺溘ｉ縺ｩ縺・☆繧具ｼ溘梧､懆ｪ阪阪・謇狗ｶ壹″縺ｨ蜈ｬ豁｣險ｼ譖ｸ驕ｺ險縺ｨ縺ｮ驕輔＞
+  繧ｹ繧ｭ繝・・・・emini API繧ｨ繝ｩ繝ｼ 429: {
+  "error": {
+    "code": 429,
+    "message": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota ex・・
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 38譛ｬ・・
+繝悶Ο繧ｰ: infinity_peace24 / 譁ｰ隕丞ｯｾ雎｡: 1譛ｬ / 繝｢繝ｼ繝・ 蜈ｬ髢・
+
+OK [1/1] 逶ｸ邯壻ｺｺ縺瑚ｪｰ繧ゅ＞縺ｪ縺・→縺ｩ縺・↑繧具ｼ溷嵜縺ｮ雋｡逕｣縺ｫ縺ｪ繧九・繧帝亟縺千函蜑榊ｯｾ遲悶→謇・  -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31070636
+
+螳御ｺ・ 1/1 謌仙粥・亥・髢具ｼ・
+
+
+===================== 2026-06-06 16:51:11 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+python.exe : Gemini API繧ｨ繝ｩ繝ｼ 503: {
+発生場所 C:\Users\user\Desktop\kakeizu-navi-blog\auto_run.ps1:18 文字:8
++ $gen = & $py generate_articles.py --auto 3 --max-total 70 2>&1 | Out- ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Gemini API繧ｨ繝ｩ繝ｼ 503: {:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try ag
+ain later.",
+    "status": "UNAVAILABLE"
+  }
+}
+
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 39譛ｬ・・
+譁ｰ隕上・謚慕ｨｿ蟇ｾ雎｡縺ｯ縺ゅｊ縺ｾ縺帙ｓ・医☆縺ｹ縺ｦ蜈ｬ髢区ｸ医∩・峨・
+
+
+===================== 2026-06-06 18:51:11 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ3譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 隕ｪ縺ｮ縲悟錐鄒ｩ鬆宣≡縲阪・逶ｸ邯夂ｨ弱・蟇ｾ雎｡・溽ｨ主漁鄂ｲ縺ｫ謖・遭縺輔ｌ縺ｪ縺・◆繧√・蟇ｾ遲悶→蛻､譁ｭ蝓ｺ貅・
+  霑ｽ蜉: 40-meigi-yokin-souzokuzei-taisaku.html
+逕滓・荳ｭ: 雋蜍慕肇縺ｫ縺ｪ繧句燕縺ｫ・∫ｩｺ縺榊ｮｶ繧堤嶌邯壹＠縺滓凾縺ｮ遞朱≡縲∫ｶｭ謖∬ｲｻ縲∝・蛻・婿豕輔ｒ蠕ｹ蠎戊ｧ｣隱ｬ
+  霑ｽ蜉: 41-akiya-souzoku-zeikin-shobun.html
+逕滓・荳ｭ: 逶ｸ邯壹＠縺溯ｲ｡逕｣繧医ｊ蛟滄≡縺悟､壹＞・溘碁剞螳壽価隱阪阪〒雋蛯ｵ繝ｪ繧ｹ繧ｯ繧貞屓驕ｿ縺吶ｋ譁ｹ豕輔→謇狗ｶ壹″
+  霑ｽ蜉: 42-gentei-shonin-fusa-risk-kaihi.html
+
+逕滓・螳御ｺ・ 3譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 39譛ｬ・・
+繝悶Ο繧ｰ: infinity_peace24 / 譁ｰ隕丞ｯｾ雎｡: 3譛ｬ / 繝｢繝ｼ繝・ 蜈ｬ髢・
+
+OK [1/3] 隕ｪ縺ｮ縲悟錐鄒ｩ鬆宣≡縲阪・逶ｸ邯夂ｨ弱・蟇ｾ雎｡・溽ｨ主漁鄂ｲ縺ｫ謖・遭縺輔ｌ縺ｪ縺・◆繧√・蟇ｾ遲悶→   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31071508
+OK [2/3] 雋蜍慕肇縺ｫ縺ｪ繧句燕縺ｫ・∫ｩｺ縺榊ｮｶ繧堤嶌邯壹＠縺滓凾縺ｮ遞朱≡縲∫ｶｭ謖∬ｲｻ縲∝・蛻・婿豕輔ｒ蠕ｹ   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31071509
+OK [3/3] 逶ｸ邯壹＠縺溯ｲ｡逕｣繧医ｊ蛟滄≡縺悟､壹＞・滄剞螳壽価隱阪〒雋蛯ｵ繝ｪ繧ｹ繧ｯ繧貞屓驕ｿ縺吶ｋ譁ｹ豕輔→   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31071510
+
+螳御ｺ・ 3/3 謌仙粥・亥・髢具ｼ・
+
+
+===================== 2026-06-06 21:55:38 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ1譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 逶ｸ邯夂ｨ弱ｒ迴ｾ驥代〒謇輔∴縺ｪ縺・ｼ∝ｻｶ邏阪→迚ｩ邏阪〒邏咲ｨ弱☆繧区婿豕輔→譚｡莉ｶ繧貞ｾｹ蠎戊ｧ｣隱ｬ
+  霑ｽ蜉: 43-souzokutax-ennou-butsunou.html
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+・亥・髢区ｸ医∩縺ｮ縺溘ａ繧ｹ繧ｭ繝・・: 42譛ｬ・・
+繝悶Ο繧ｰ: infinity_peace24 / 譁ｰ隕丞ｯｾ雎｡: 1譛ｬ / 繝｢繝ｼ繝・ 蜈ｬ髢・
+
+OK [1/1] 逶ｸ邯夂ｨ弱ｒ迴ｾ驥代〒謇輔∴縺ｪ縺・ｼ∝ｻｶ邏阪→迚ｩ邏阪〒邏咲ｨ弱☆繧区婿豕輔→譚｡莉ｶ繧貞ｾｹ蠎戊ｧ｣隱ｬ   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31072163
+
+螳御ｺ・ 1/1 謌仙粥・亥・髢具ｼ・
+
+
+===================== 2026-06-07 08:17:04 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ1譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 逶ｸ邯夊ｲ｡逕｣縺ｮ蜷咲ｾｩ鬆宣≡縲∫ｨ主漁鄂ｲ縺ｫ謖・遭縺輔ｌ縺ｪ縺・◆繧√・蛻､譁ｭ蝓ｺ貅悶→蟇ｾ遲・
+  霑ｽ蜉: 53-meigi-yokin-souzoku.html
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+
+===================== 2026-06-07 08:19:18 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ1譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 逶ｸ邯夊ｲ｡逕｣縺ｫ縲悟錐鄒ｩ鬆宣≡縲阪′・∫ｨ主漁鄂ｲ縺ｫ謖・遭縺輔ｌ縺ｪ縺・◆繧√・蛻､譁ｭ蝓ｺ貅悶→蟇ｾ遲・
+  霑ｽ蜉: 54-meigi-yokin-sozoku.html
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+
+===================== 2026-06-07 08:21:09 =====================
+AI縺ｫ譁ｰ隕上ユ繝ｼ繝槭ｒ1譛ｬ謠先｡医＆縺帙※縺・∪縺・..
+逕滓・荳ｭ: 逶ｸ邯夊ｲ｡逕｣縺ｮ蜷咲ｾｩ鬆宣≡縲∫ｨ主漁鄂ｲ縺ｯ縺薙％繧定ｦ九※縺・ｋ・∵欠鞫倥＆繧後↑縺・◆繧√・蟇ｾ遲悶→蛻､譁ｭ蝓ｺ貅・
+  霑ｽ蜉: 55-meigi-yokin-sozoku-2.html
+
+逕滓・螳御ｺ・ 1譛ｬ繧・manifest 縺ｫ霑ｽ蜉縺励∪縺励◆縲・
+竊・蜈ｬ髢九☆繧九↓縺ｯ: python post_to_livedoor.py --publish
+
+
+===================== 2026-06-07 08:27:06 (auto_pipeline) =====================
+[1/3 生成]
+AIに新規テーマを1本提案させています...
+生成中: 相続財産に「名義預金」が隠れている？税務署に指摘されないための判断基準と対策
+  追加: 56-meigi-yokin-sozoku-3.html
+
+生成完了: 1本を manifest に追加しました。
+→ 公開するには: python post_to_livedoor.py --publish
+[2/3 公開]
+（公開済みのためスキップ: 54本）
+ブログ: infinity_peace24 / 新規対象: 2本 / モード: 公開
+
+OK [1/2] 相続財産の名義預金、税務署はここを見ている！指摘されないための対   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31074071
+OK [2/2] 相続財産に「名義預金」が隠れている？税務署に指摘されないための判   -> 201 https://livedoor.blogcms.jp/atompub/infinity_peace24/article/31074072
+
+完了: 2/2 成功（公開）
+[3/3 広告]
+skip(挿入済) meigi-yokin-sozoku
+OK 2026-06-07  meigi-yokin-sozoku-2
+OK 2026-06-07  meigi-yokin-sozoku-3
+
+挿入 2 / スキップ 1 / 合計対象 3
+[完了]

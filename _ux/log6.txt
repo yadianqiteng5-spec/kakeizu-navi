@@ -1,0 +1,9 @@
+clicked 標準
+shot 08_tax.png at 相続税
+shot 09_special.png at 小規模宅地
+shot 10_secondary.png at 二次相続
+shot 11_ai.png at AI診断
+shot 12_pdf.png at PDF
+sidebar has 広告プレースホルダー 4
+sidebar has スポンサー広告 1
+sidebar has 税理士ドットコム 0

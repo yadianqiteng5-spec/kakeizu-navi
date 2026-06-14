@@ -1,0 +1,314 @@
+[
+  {
+    "slug": "about",
+    "title": "運営者情報・このブログについて｜相続の基礎知識と無料シミュレーター",
+    "category": "このサイトについて",
+    "file": "21-about.html"
+  },
+  {
+    "slug": "inheritance-tax-how-much",
+    "title": "相続税はいくらから？基礎控除3,600万円の壁と計算法【家族構成別 早見表】",
+    "category": "相続の基礎知識",
+    "file": "01-inheritance-tax.html"
+  },
+  {
+    "slug": "legal-inheritance-share",
+    "title": "配偶者と子で相続、取り分はいくら？法定相続分の早見表でわかる分け方",
+    "category": "相続の基礎知識",
+    "file": "02-legal-share.html"
+  },
+  {
+    "slug": "iryubun",
+    "title": "「全部、長男に相続させる」は通る？遺留分のしくみと計算法",
+    "category": "相続でもめない",
+    "file": "03-iryubun.html"
+  },
+  {
+    "slug": "shokibo-takuchi",
+    "title": "実家を相続すると税金が大変？小規模宅地等の特例で評価を最大8割減",
+    "category": "相続税の節税",
+    "file": "04-shokibo-takuchi.html"
+  },
+  {
+    "slug": "jigyo-shokei-kabu",
+    "title": "社長が突然倒れたら？自社株の相続リスクと後継者への集中のしかた",
+    "category": "事業承継",
+    "file": "05-jigyo-shokei-kabu.html"
+  },
+  {
+    "slug": "seizen-zoyo-2024",
+    "title": "生前贈与110万円はもう古い？2024年改正で変わった3つのポイント",
+    "category": "生前対策",
+    "file": "06-seizen-zoyo-2024.html"
+  },
+  {
+    "slug": "yuigon-jihitsu",
+    "title": "自筆の遺言書を無効にしないための最低4条件と保管のコツ",
+    "category": "遺言",
+    "file": "07-yuigon-jihitsu.html"
+  },
+  {
+    "slug": "souzoku-tetsuzuki",
+    "title": "親が亡くなったら何から？相続手続きの全体像と期限【一覧】",
+    "category": "相続の基礎知識",
+    "file": "08-souzoku-tetsuzuki.html"
+  },
+  {
+    "slug": "daishu-souzoku",
+    "title": "孫が相続人になる「代襲相続」とは？取り分の計算をやさしく解説",
+    "category": "相続の基礎知識",
+    "file": "09-daishu-souzoku.html"
+  },
+  {
+    "slug": "niji-souzoku",
+    "title": "「一次相続で得して二次相続で損」を防ぐ相続税の考え方",
+    "category": "相続税の節税",
+    "file": "10-niji-souzoku.html"
+  },
+  {
+    "slug": "haigusha-kojo",
+    "title": "配偶者は1億6,000万円まで無税？配偶者の税額軽減の落とし穴",
+    "category": "相続税の節税",
+    "file": "11-haigusha-kojo.html"
+  },
+  {
+    "slug": "kyodai-momeru",
+    "title": "きょうだいの相続でもめる典型パターンと、今からできる予防策",
+    "category": "相続でもめない",
+    "file": "12-kyodai-momeru.html"
+  },
+  {
+    "slug": "fudosan-wakekata",
+    "title": "不動産は分けにくい—相続でもめないための4つの分割方法",
+    "category": "相続でもめない",
+    "file": "13-fudosan-wakekata.html"
+  },
+  {
+    "slug": "souzoku-hoki",
+    "title": "借金も相続される？相続放棄の「3か月ルール」と注意点",
+    "category": "相続の基礎知識",
+    "file": "14-souzoku-hoki.html"
+  },
+  {
+    "slug": "jigyo-shokei-zeisei",
+    "title": "自社株の税金が猶予される「事業承継税制」入門と継続要件",
+    "category": "事業承継",
+    "file": "15-jigyo-shokei-zeisei.html"
+  },
+  {
+    "slug": "yoshi-engumi",
+    "title": "養子縁組で相続税は減る？節税効果と見落としがちな注意点",
+    "category": "相続税の節税",
+    "file": "16-yoshi-engumi.html"
+  },
+  {
+    "slug": "rekinen-vs-seisan",
+    "title": "どっちが得？暦年贈与と相続時精算課税の選び方【2024年版】",
+    "category": "生前対策",
+    "file": "17-rekinen-vs-seisan.html"
+  },
+  {
+    "slug": "simulation-muryo",
+    "title": "相続税はいくら？無料でできる相続シミュレーションの選び方",
+    "category": "相続の基礎知識",
+    "file": "18-simulation-muryo.html"
+  },
+  {
+    "slug": "hanketsu-kyodai",
+    "title": "父親だけ同じ兄弟、相続分は半分？半血兄弟姉妹の取り分を解説",
+    "category": "相続の基礎知識",
+    "file": "19-hanketsu-kyodai.html"
+  },
+  {
+    "slug": "ninchisho-taisaku",
+    "title": "親が認知症になる前に—家族でやっておきたい相続準備",
+    "category": "生前対策",
+    "file": "20-ninchisho-taisaku.html"
+  },
+  {
+    "slug": "kazoku-shintaku-ninchisho-sozoku-taisaku",
+    "title": "家族信託とは？認知症対策と相続争い防止の仕組み",
+    "category": "生前対策",
+    "file": "22-kazoku-shintaku-ninchisho-sozoku-taisaku.html"
+  },
+  {
+    "slug": "isan-bunkatsu-kyogisho-kakitata-chuiten",
+    "title": "遺産分割協議書は自分で作成可能？書き方、ひな形、注意点を解説",
+    "category": "相続の基礎知識",
+    "file": "23-isan-bunkatsu-kyogisho-kakitata-chuiten.html"
+  },
+  {
+    "slug": "inheritance-tax-filing-guide",
+    "title": "相続税の申告はいつまで？必要な書類と手続きの進め方",
+    "category": "相続の基礎知識",
+    "file": "24-inheritance-tax-filing-guide.html"
+  },
+  {
+    "slug": "koseishosho-jipitsu-igon-hikaku",
+    "title": "日本の相続における遺言の種類：公正証書遺言と自筆証書遺言を徹底比較",
+    "category": "遺言",
+    "file": "25-koseishosho-jipitsu-igon-hikaku.html"
+  },
+  {
+    "slug": "shibou-hokenkin-souzokuzei-setszei",
+    "title": "死亡保険金は相続税がかかる？非課税枠と受取人の指定で賢く節税",
+    "category": "相続税の節税",
+    "file": "26-shibou-hokenkin-souzokuzei-setszei.html"
+  },
+  {
+    "slug": "kakushi-zaisan-chosa",
+    "title": "相続財産に隠し財産？見つけ方と調査の注意点",
+    "category": "相続でもめない",
+    "file": "27-kakushi-zaisan-chosa.html"
+  },
+  {
+    "slug": "sme-succession-options-no-heir",
+    "title": "後継者がいない中小企業オーナー必見！事業承継の選択肢を徹底解説",
+    "category": "事業承継",
+    "file": "28-sme-succession-options-no-heir.html"
+  },
+  {
+    "slug": "souzokunin-chousa-koseki-touhon-atsumekata",
+    "title": "相続人調査は何のために必要？戸籍謄本の集め方と探し方",
+    "category": "相続の基礎知識",
+    "file": "29-souzokunin-chousa-koseki-touhon-atsumekata.html"
+  },
+  {
+    "slug": "iryo-hi-kojo-sozokuzei-jun-kakutei-shinkoku",
+    "title": "医療費控除は相続税に影響する？準確定申告で賢く節税対策",
+    "category": "相続税の節税",
+    "file": "30-iryo-hi-kojo-sozokuzei-jun-kakutei-shinkoku.html"
+  },
+  {
+    "slug": "ending-note-kikata",
+    "title": "エンディングノートの書き方｜もしもの時に役立つ「あなたの記録」で家族を安心させる",
+    "category": "生前対策",
+    "file": "31-ending-note-kikata.html"
+  },
+  {
+    "slug": "frozen-bank-account-inheritance-japan",
+    "title": "銀行口座が凍結されたらどうする？解除方法と引き出しの注意点",
+    "category": "相続の基礎知識",
+    "file": "32-frozen-bank-account-inheritance-japan.html"
+  },
+  {
+    "slug": "inheritance-registration-diy",
+    "title": "【2024年義務化】相続登記は自分でできる？必要書類と費用、申請方法を徹底解説",
+    "category": "相続の基礎知識",
+    "file": "33-inheritance-registration-diy.html"
+  },
+  {
+    "slug": "yuigon-shikkosha-kaisetsu",
+    "title": "遺言執行者とは？選任方法、役割、報酬までプロが解説【トラブル回避の鍵】",
+    "category": "遺言",
+    "file": "34-yuigon-shikkosha-kaisetsu.html"
+  },
+  {
+    "slug": "ninchisho-seinenkouken-guide",
+    "title": "認知症の親をサポート！成年後見制度のメリット・デメリットと手続きを解説",
+    "category": "生前対策",
+    "file": "35-ninchisho-seinenkouken-guide.html"
+  },
+  {
+    "slug": "digital-ihin-seizen",
+    "title": "デジタル遺品」の整理は生前がカギ？SNSや仮想通貨の相続手続きと注意点",
+    "category": "生前対策",
+    "file": "36-digital-ihin-seizen.html"
+  },
+  {
+    "slug": "souzokutax-chousa-taisaku",
+    "title": "相続税の税務調査はなぜ来る？対策と準備、指摘されやすいポイントを解説",
+    "category": "相続税の節税",
+    "file": "37-souzokutax-chousa-taisaku.html"
+  },
+  {
+    "slug": "isan-bunkatsu-kyougi-momeru-genin-taishohou",
+    "title": "遺産分割協議で揉める原因と対処法｜弁護士に依頼するタイミングも解説",
+    "category": "相続でもめない",
+    "file": "38-isan-bunkatsu-kyougi-momeru-genin-taishohou.html"
+  },
+  {
+    "slug": "sozokunin-inai-koku-zaisan-seizentaisaku",
+    "title": "相続人が誰もいないとどうなる？国の財産になるのを防ぐ生前対策と手続き",
+    "category": "生前対策",
+    "file": "39-sozokunin-inai-koku-zaisan-seizentaisaku.html"
+  },
+  {
+    "slug": "meigi-yokin-souzokuzei-taisaku",
+    "title": "親の「名義預金」は相続税の対象？税務署に指摘されないための対策と判断基準",
+    "category": "相続税の節税",
+    "file": "40-meigi-yokin-souzokuzei-taisaku.html"
+  },
+  {
+    "slug": "akiya-souzoku-zeikin-shobun",
+    "title": "負動産になる前に！空き家を相続した時の税金、維持費、処分方法を徹底解説",
+    "category": "相続の基礎知識",
+    "file": "41-akiya-souzoku-zeikin-shobun.html"
+  },
+  {
+    "slug": "gentei-shonin-fusa-risk-kaihi",
+    "title": "相続した財産より借金が多い？限定承認で負債リスクを回避する方法と手続き",
+    "category": "相続の基礎知識",
+    "file": "42-gentei-shonin-fusa-risk-kaihi.html"
+  },
+  {
+    "slug": "souzokutax-ennou-butsunou",
+    "title": "相続税を現金で払えない！延納と物納で納税する方法と条件を徹底解説",
+    "category": "相続税の節税",
+    "file": "43-souzokutax-ennou-butsunou.html"
+  },
+  {
+    "slug": "zoyozei-kaisei-seizenzoyo",
+    "title": "【2024年最新】贈与税の改正点と賢い生前贈与のコツ｜家系図Navi",
+    "category": "生前対策",
+    "file": "44-zoyozei-kaisei-seizenzoyo.html"
+  },
+  {
+    "slug": "no-will-inheritance",
+    "title": "遺言書がないとどうなる？遺言書がない場合の相続手続きと注意点",
+    "category": "遺言",
+    "file": "45-no-will-inheritance.html"
+  },
+  {
+    "slug": "inheritance-tax-differences",
+    "title": "一次相続と二次相続の税金の違いとは？損しないための相続計画",
+    "category": "相続税の節税",
+    "file": "46-inheritance-tax-differences.html"
+  },
+  {
+    "slug": "jigyo-shokei-guide",
+    "title": "事業承継で失敗しないために！中小企業オーナーが知るべきM&Aと親族内承継",
+    "category": "事業承継",
+    "file": "47-jigyo-shokei-guide.html"
+  },
+  {
+    "slug": "jikka-sozoku-chui",
+    "title": "相続でもめる家はこれ！実家を相続する際の注意点と円満な解決策（相続でもめない）",
+    "category": "相続でもめない",
+    "file": "48-jikka-sozoku-chui.html"
+  },
+  {
+    "slug": "inheritance-tax-calculation",
+    "title": "相続税の計算方法をゼロから解説！基礎控除・税率・計算例まで（相続の基礎知識）",
+    "category": "相続の基礎知識",
+    "file": "49-inheritance-tax-calculation.html"
+  },
+  {
+    "slug": "inheritance-debt",
+    "title": "借金も相続財産？相続放棄と限定承認のメリット・デメリット｜相続の基礎知識",
+    "category": "相続の基礎知識",
+    "file": "50-inheritance-debt.html"
+  },
+  {
+    "slug": "iryubun-shingai-seikyu",
+    "title": "遺留分侵害額請求とは？請求できる人・できない人、時効や手続きを解説",
+    "category": "相続でもめない",
+    "file": "51-iryubun-shingai-seikyu.html"
+  },
+  {
+    "slug": "jishakabu-setsurei",
+    "title": "自社株の評価額を下げる！事業承継を見据えた節税対策",
+    "category": "事業承継",
+    "file": "52-jishakabu-setsurei.html"
+  }
+]
