@@ -1,7 +1,0 @@
-consent_ok False
-shot 05 full
-has 質問に答えるだけ False
-has まとめてテキスト入力 False
-has 典型事例 False
-has Step 1 False
-has 家族構成を入力 False

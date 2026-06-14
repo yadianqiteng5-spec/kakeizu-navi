@@ -1,33 +1,9 @@
-# Streamlit / 環境変数
-.streamlit/secrets.toml
-.env
-.env.*
-!.env.example
-
-# Python
+# 別プロジェクト（独立リポジトリ・成果物）
+_ux/
+kakeizu-navi-lp/
+kakeizu-navi-blog/
+kakeizu-navi-slides/
+要件定義書.md
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.venv/
-venv/
-*.egg-info/
-
-# Fly.io
-.fly/
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.swp
-
-# テスト・一時ファイル
-test_output.*
-*.pdf
-.pytest_cache/
-.mypy_cache/
-
-# Claude Code
-.claude/
+*.bak

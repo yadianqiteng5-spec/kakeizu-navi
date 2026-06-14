@@ -1,3 +1,0 @@
-shot 02
-shot 03
-shot 04 full clicked= False
