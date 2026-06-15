@@ -24,6 +24,34 @@ inject_pwa_assets()
 MAX_FILE_MB = 5
 MAX_LLM_CALLS = 8
 
+# ── アフィリエイト（accesstrade 実案件）────────────────────────────────────
+# 結果画面の高インテント地点（税額提示直後・最下部CTA）に接続する実リンク。
+# リンク切れ "#" を撲滅し、サイドバー（モバイルでは折りたたまれ不可視）だけに
+# 依存していた収益導線を、本文フロー＝モバイルでも必ず見える位置へ確保する。
+AFF_TAX_URL = "https://h.accesstrade.net/sp/cc?rk=0100npm700ou1t"    # 税理士ドットコム
+AFF_SHIHO_URL = "https://h.accesstrade.net/sp/cc?rk=0100p36700ou1t"  # アース司法書士事務所
+
+
+def _expert_cta_inline(headline, sub, url, grad=("#11998e", "#38ef7d"), label="無料で相談する"):
+    """本文フロー内に置く横長の専門家相談CTA（モバイルでも必ず視認できる位置に配置）。"""
+    st.markdown(
+        f"""<div style="font-size:10px;color:#9aa;letter-spacing:1px;margin:6px 0 2px;">PR / 広告</div>
+        <a href="{url}" target="_blank" rel="nofollow noopener sponsored"
+           referrerpolicy="no-referrer-when-downgrade" style="text-decoration:none;color:inherit;">
+        <div style="background:linear-gradient(135deg,{grad[0]},{grad[1]});color:white;
+             padding:16px 20px;border-radius:12px;display:flex;justify-content:space-between;
+             align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,0.12);">
+          <div style="text-align:left;min-width:200px;">
+            <div style="font-size:15px;font-weight:700;">{headline}</div>
+            <div style="font-size:12px;opacity:0.95;line-height:1.5;">{sub}</div>
+          </div>
+          <span style="background:#fff;color:#0b6e54;padding:9px 20px;border-radius:22px;
+                font-weight:700;font-size:13px;white-space:nowrap;">{label} →</span>
+        </div></a>""",
+        unsafe_allow_html=True,
+    )
+
+
 inject_seo_meta()
 
 
@@ -949,6 +977,13 @@ elif st.session_state.step == 2:
             "必ず税理士にご相談ください。"
         )
 
+        # ── 高インテント地点の専門家相談CTA（税額提示の直後＝最も相談意欲が高い）──
+        _expert_cta_inline(
+            "相続税の負担、軽減できる場合があります",
+            "相続専門の税理士に無料で相談。この診断結果を見せるだけ・全国対応・相談は無料です。",
+            AFF_TAX_URL,
+        )
+
         # ── 3-3-b. 小規模宅地等の特例（任意入力で減額シミュレーション） ────
         with st.expander("🏠 小規模宅地等の特例を試算する（任意）", expanded=False):
             st.caption(
@@ -1567,47 +1602,49 @@ elif st.session_state.step == 2:
 
     st.divider()
 
-    # ── 3-9. CTAバナー広告（アフィリエイトリンク差し替え可能） ────────────────
+    # ── 3-9. 専門家相談CTA（accesstrade 実案件・結果画面の最終コンバージョン点）─
     st.subheader("👨‍💼 次のステップ：専門家にご相談を")
-
-    # ▼ アフィリエイト URL（承認後にここを差し替えるだけ）
-    AFFILIATE_URL_TAX = "#"          # 例: 税理士ドットコム（A8.net 案件）
-    AFFILIATE_URL_BIZ = "#"          # 例: 事業承継・M&A仲介（A8.net 案件）
+    st.markdown(
+        '<div style="font-size:10px;color:#9aa;letter-spacing:1px;margin-bottom:4px;">PR / 広告</div>',
+        unsafe_allow_html=True,
+    )
 
     b1, b2 = st.columns(2)
     with b1:
         st.markdown(
-            f"""<a href="{AFFILIATE_URL_TAX}" target="_blank" rel="noopener sponsored"
-            style="text-decoration:none;color:inherit;">
+            f"""<a href="{AFF_TAX_URL}" target="_blank" rel="nofollow noopener sponsored"
+            referrerpolicy="no-referrer-when-downgrade" style="text-decoration:none;color:inherit;">
             <div style="background:linear-gradient(135deg,#667eea,#764ba2);
-            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;">
-            <b style="font-size:16px;">相続専門税理士に無料相談</b><br>
-            <span style="font-size:13px;">診断結果を見せるだけでOK・全国対応</span><br><br>
+            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;
+            box-shadow:0 2px 10px rgba(0,0,0,0.12);height:100%;">
+            <b style="font-size:16px;">相続税・事業承継を税理士に無料相談</b><br>
+            <span style="font-size:13px;">診断結果を見せるだけでOK・全国対応・相談無料</span><br><br>
             <span style="background:white;color:#667eea;padding:6px 20px;
                   border-radius:20px;font-weight:bold;font-size:13px;">
-            相談する →
+            税理士を探す →
             </span>
             </div></a>""",
             unsafe_allow_html=True,
         )
     with b2:
         st.markdown(
-            f"""<a href="{AFFILIATE_URL_BIZ}" target="_blank" rel="noopener sponsored"
-            style="text-decoration:none;color:inherit;">
+            f"""<a href="{AFF_SHIHO_URL}" target="_blank" rel="nofollow noopener sponsored"
+            referrerpolicy="no-referrer-when-downgrade" style="text-decoration:none;color:inherit;">
             <div style="background:linear-gradient(135deg,#f093fb,#f5576c);
-            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;">
-            <b style="font-size:16px;">事業承継・M&A専門家に相談</b><br>
-            <span style="font-size:13px;">後継者問題・自社株対策を無料診断</span><br><br>
+            color:white;padding:20px;border-radius:12px;text-align:center;cursor:pointer;
+            box-shadow:0 2px 10px rgba(0,0,0,0.12);height:100%;">
+            <b style="font-size:16px;">相続手続き・名義変更を司法書士に相談</b><br>
+            <span style="font-size:13px;">相続登記（2024年義務化）・遺産分割の手続き代行</span><br><br>
             <span style="background:white;color:#f5576c;padding:6px 20px;
                   border-radius:20px;font-weight:bold;font-size:13px;">
-            診断を受ける →
+            司法書士に相談 →
             </span>
             </div></a>""",
             unsafe_allow_html=True,
         )
     st.caption(
-        "※ 上記は広告枠です（アフィリエイトリンク差し替え予定）。"
-        "リンク先での申込・契約は各社の責任のもとで行われ、当サイトは仲介を行いません。"
+        "※ 広告（アフィリエイト）リンクです。リンク先での申込・契約は各社の責任のもとで行われ、"
+        "当サイトは仲介を行いません。掲載の有無・順序は表示時点のものです。"
     )
 
     st.divider()
@@ -1672,7 +1709,7 @@ st.markdown(
     🔒 ゼロ・リテンション</span>
     <span style="background:#E67E22;color:white;padding:4px 10px;border-radius:12px;
                  font-size:11px;font-weight:bold;">
-    🤖 Claude + Gemini</span>
+    🤖 Gemini</span>
     </div>""",
     unsafe_allow_html=True,
 )
