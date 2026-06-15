@@ -58,7 +58,6 @@ fly launch --no-deploy --copy-config --name kakeizu-navi --region nrt
 ## 5. APIキーを Secrets に登録
 
 ```powershell
-fly secrets set ANTHROPIC_API_KEY="sk-ant-xxxxxxxx"
 fly secrets set GEMINI_API_KEY="AIzaxxxxxxxx"
 ```
 

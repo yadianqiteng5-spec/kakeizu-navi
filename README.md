@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.36%2B-FF4B4B)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/license-Proprietary-lightgrey)](#-ライセンス)
-[![AI](https://img.shields.io/badge/AI-Claude%20%2B%20Gemini-9B59B6)](#)
+[![AI](https://img.shields.io/badge/AI-Gemini-9B59B6)](#)
 [![Zero Retention](https://img.shields.io/badge/data-zero%20retention-1ABC9C)](#-プライバシーゼロリテンション設計)
 [![Legal Safety](https://img.shields.io/badge/弁護士法72条-配慮済-2C3E50)](./core/legal_safety.py)
 
@@ -126,7 +126,6 @@
 pip install -r requirements.txt
 
 # APIキー設定（オプション）
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
 $env:GEMINI_API_KEY = "AIza..."
 
 # 起動
@@ -163,7 +162,6 @@ CI/デプロイの通知設定は [`NOTIFICATIONS.md`](./NOTIFICATIONS.md) を�
 3. New app → リポジトリと `app.py` を指定
 4. Settings → Secrets で以下を設定:
    ```toml
-   ANTHROPIC_API_KEY = "sk-ant-..."
    GEMINI_API_KEY = "AIza..."
    ```
 5. Deploy → 数分で公開完了
