@@ -1,7 +1,9 @@
 """
 Gemini API連携モジュール（相続・事業承継診断）
-- 環境変数 GEMINI_API_KEY または GOOGLE_API_KEY を読み込む
-- 無料枠の gemini-2.5-flash を使用
+- Secrets / 環境変数の GEMINI_API_KEY 等を読み込む（名前の大小ゆれに対応）
+- 後継SDK **google-genai** を使用（旧 google-generativeai は EOL）
+- 無料枠の gemini-2.5-flash を既定に、利用可能モデルを動的選択
+- プライバシー指示・非弁制約は system_instruction で渡し、出力へ混入させない
 """
 import os
 import json
@@ -9,7 +11,7 @@ import re
 from typing import Optional
 
 _MODEL_NAME = "gemini-2.5-flash"
-_FALLBACK_MODEL = "gemini-1.5-flash"
+_FALLBACK_MODEL = "gemini-2.0-flash"
 
 
 # 受理するAPIキー名（大文字小文字のゆれにも対応）
@@ -52,8 +54,7 @@ def _get_api_key() -> Optional[str]:
 
 
 def _get_secret(name: str) -> Optional[str]:
-    """st.secrets → 環境変数 の順で任意の設定値を取得（GEMINI_MODEL 等）。
-    未定義だと _pick_model 内で NameError となり全AI呼び出しがクラッシュするため必須。"""
+    """st.secrets → 環境変数 の順で任意の設定値を取得（GEMINI_MODEL 等）。"""
     try:
         import streamlit as st
         try:
@@ -81,15 +82,18 @@ def get_last_error() -> Optional[str]:
 
 
 # 相続は「死亡」を扱うため、セーフティフィルタの誤ブロックを防ぐ（事実ベースの法律情報）
-_SAFETY_SETTINGS = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
+def _safety_settings():
+    from google.genai import types
+    return [
+        types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_NONE"),
+        types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_NONE"),
+        types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_NONE"),
+        types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_NONE"),
+    ]
+
 
 _resolved_model: Optional[str] = None   # 一度解決したモデル名をキャッシュ
-_available_models: list = []            # list_models() で判明した利用可能モデル（診断用）
+_available_models: list = []            # list() で判明した利用可能モデル（診断用）
 
 
 def available_models_str() -> str:
@@ -100,9 +104,15 @@ def available_models_str() -> str:
     return "(取得できず)"
 
 
-def _pick_model(genai, prefer: Optional[str] = None) -> str:
+def _get_client():
+    """google-genai Client を返す。"""
+    from google import genai
+    return genai.Client(api_key=_get_api_key())
+
+
+def _pick_model(client, prefer: Optional[str] = None) -> str:
     """
-    APIキーが実際に使えるモデルを list_models() で問い合わせて選ぶ。
+    APIキーが実際に使えるモデルを client.models.list() で問い合わせて選ぶ。
     名前のズレ・モデル廃止で全滅しないための堅牢化。優先順位:
       1. secrets/env の GEMINI_MODEL
       2. 呼び出し側の希望(prefer)
@@ -113,16 +123,15 @@ def _pick_model(genai, prefer: Optional[str] = None) -> str:
         return _resolved_model
 
     override = _get_secret("GEMINI_MODEL")
-    # 新しめ・現行で有効な可能性が高い順（廃止済みの1.5系は最後）
     prefs = [override, prefer,
              "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite",
              "gemini-flash-latest", "gemini-2.0-flash-001"]
 
     available = []
     try:
-        for m in genai.list_models():
-            methods = getattr(m, "supported_generation_methods", []) or []
-            if "generateContent" in methods:
+        for m in client.models.list():
+            acts = getattr(m, "supported_actions", None) or []
+            if "generateContent" in acts:
                 available.append(m.name)   # 例: "models/gemini-2.0-flash"
     except Exception:
         available = []
@@ -151,27 +160,48 @@ def _pick_model(genai, prefer: Optional[str] = None) -> str:
         _resolved_model = available[0]
         return available[0]
 
-    # list_models が取れない場合の最終手段（廃止済みの1.5系は避け現行系を既定に）
-    _resolved_model = override or "gemini-2.0-flash"
+    # list() が取れない場合の最終手段
+    _resolved_model = override or _MODEL_NAME
     return _resolved_model
 
 
-def _new_model(genai, name):
-    """実際に使えるモデルを解決し、安全設定付きで GenerativeModel を返す。"""
-    chosen = _pick_model(genai, prefer=name)
-    return genai.GenerativeModel(chosen, safety_settings=_SAFETY_SETTINGS)
+def _run(contents, prefer: str = _MODEL_NAME, system_instruction: Optional[str] = None):
+    """
+    contents を generate_content に渡し response を返す。
+    プライバシー/非弁制約は system_instruction で渡す（出力に混ざらない）。
+    プライマリモデルが失敗したらフォールバックモデルを直接試す。失敗時は例外を送出。
+    """
+    from google.genai import types
+    client = _get_client()
+    cfg = types.GenerateContentConfig(
+        safety_settings=_safety_settings(),
+        system_instruction=system_instruction or None,
+    )
+    primary = _pick_model(client, prefer=prefer)
+    try:
+        return client.models.generate_content(model=primary, contents=contents, config=cfg)
+    except Exception:
+        # フォールバック（キャッシュではなく明示モデルで再試行）
+        return client.models.generate_content(model=_FALLBACK_MODEL, contents=contents, config=cfg)
 
 
+def _inline_part(data: bytes, mime_type: str):
+    """画像・音声などのインラインバイナリを Part 化する。"""
+    from google.genai import types
+    return types.Part.from_bytes(data=data, mime_type=mime_type)
+
+
+# system_instruction として渡す指示（出力には出さない）
 _PRIVACY_PREAMBLE = (
-    "【重要・機密情報】これは個人の家族・資産情報です。"
-    "モデル学習に使用しないでください。回答後にデータを保持・記録しないでください。\n\n"
+    "これは個人の家族・資産情報です。モデル学習に使用しないでください。"
+    "回答後にデータを保持・記録しないでください。"
 )
 
 
-def _safety_instructions() -> str:
-    """非弁活動回避のためのプロンプト制約を返す"""
+def _advisory_system() -> str:
+    """診断・遺言生成向け: プライバシー指示＋非弁活動回避制約。"""
     from core.legal_safety import PROMPT_SAFETY_INSTRUCTIONS
-    return PROMPT_SAFETY_INSTRUCTIONS
+    return _PRIVACY_PREAMBLE + "\n\n" + PROMPT_SAFETY_INSTRUCTIONS
 
 
 def diagnose_succession_gemini(
@@ -184,8 +214,7 @@ def diagnose_succession_gemini(
     Geminiで相続・事業承継リスクを診断し、最適な一手を提示する。
     無料枠の gemini-2.5-flash を使用。
     """
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         return (
             "❌ APIキーが設定されていません。\n\n"
             "環境変数 `GEMINI_API_KEY` または `GOOGLE_API_KEY` に\n"
@@ -194,20 +223,18 @@ def diagnose_succession_gemini(
         )
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
         return (
-            "❌ `google-generativeai` パッケージが未インストールです。\n\n"
+            "❌ `google-genai` パッケージが未インストールです。\n\n"
             "次のコマンドでインストールしてください:\n"
-            "```\npip install google-generativeai\n```"
+            "```\npip install google-genai\n```"
         )
 
     concerns = (concerns or "")[:2000]   # 入力長の上限
     concerns_block = f"\n\n【ユーザーの懸念事項】\n{concerns}" if concerns.strip() else ""
 
-    prompt = _PRIVACY_PREAMBLE + _safety_instructions() + f"""
-
-あなたは日本の相続・事業承継に**詳しい一般情報提供者**です（**弁護士・税理士ではありません**）。
+    prompt = f"""あなたは日本の相続・事業承継に**詳しい一般情報提供者**です（**弁護士・税理士ではありません**）。
 以下の情報をもとに、リスクを推定し「最優先で検討すべき一般的なアクション」を提示してください。
 個別事案への法的判断・代理・助言は行わないでください。
 
@@ -238,15 +265,7 @@ def diagnose_succession_gemini(
 最後に必ず「個別事案については専門家へのご相談が必要です」と明記してください。"""
 
     try:
-        genai.configure(api_key=api_key)
-        try:
-            model = _new_model(genai, _MODEL_NAME)
-            response = model.generate_content(prompt)
-        except Exception:
-            # 新モデルが利用不可な場合は安定版にフォールバック
-            model = _new_model(genai, _FALLBACK_MODEL)
-            response = model.generate_content(prompt)
-
+        response = _run(prompt, system_instruction=_advisory_system())
         # 非弁活動回避: 統一フッターを付加
         from core.legal_safety import with_safety_footer
         return with_safety_footer(response.text or "")
@@ -258,7 +277,7 @@ def diagnose_succession_gemini(
 # 音声→家族構成抽出（1ステップ）
 # ─────────────────────────────────────────────────────────────────
 
-_AUDIO_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話者が説明している家族関係・遺産情報を解析し、
+_AUDIO_EXTRACT_PROMPT = """この音声を聞いて、話者が説明している家族関係・遺産情報を解析し、
 以下のJSON形式のみで返してください（前置き・コードブロック・後書き不要、JSONオブジェクトのみ）:
 
 {
@@ -293,7 +312,7 @@ _AUDIO_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話者
 - is_renounced は明確に「相続放棄した」と述べた場合のみ true"""
 
 
-_TRANSCRIBE_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話されている内容を**日本語で文字起こし**してください。
+_TRANSCRIBE_PROMPT = """この音声を聞いて、話されている内容を**日本語で文字起こし**してください。
 ルール:
 - 文字起こしの本文のみを返してください（前置き・後書き・引用符・コードブロック不要）
 - 話者が言った言葉をできるだけ忠実に書き起こす
@@ -301,7 +320,7 @@ _TRANSCRIBE_PROMPT = _PRIVACY_PREAMBLE + """この音声を聞いて、話され
 - 「えーと」「あのー」等のフィラーは省略可"""
 
 
-_TEXT_EXTRACT_PROMPT_TMPL = _PRIVACY_PREAMBLE + """以下のテキストから家族関係を抽出してください。
+_TEXT_EXTRACT_PROMPT_TMPL = """以下のテキストから家族関係を抽出してください。
 
 テキスト:
 {text}
@@ -345,32 +364,23 @@ def transcribe_audio(
     音声を文字起こしのみ実行する（家族抽出はしない）。
     呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
     """
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         return None
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
         return None
 
     try:
-        genai.configure(api_key=api_key)
-        audio_part = {"mime_type": mime_type, "data": audio_bytes}
-
-        try:
-            model = _new_model(genai, _MODEL_NAME)
-            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
-        except Exception:
-            model = _new_model(genai, _FALLBACK_MODEL)
-            response = model.generate_content([audio_part, _TRANSCRIBE_PROMPT])
-
+        audio_part = _inline_part(audio_bytes, mime_type)
+        response = _run([audio_part, _TRANSCRIBE_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
         return (response.text or "").strip() or None
     except Exception:
         return None
 
 
-_IMAGE_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この画像に含まれる家族関係・家系図・戸籍情報を解析し、
+_IMAGE_EXTRACT_PROMPT = """この画像に含まれる家族関係・家系図・戸籍情報を解析し、
 以下のJSON形式のみで家族構成を返してください（前置き・コードブロック不要、JSONオブジェクトのみ）:
 {
   "persons": [
@@ -405,27 +415,21 @@ _IMAGE_EXTRACT_PROMPT = _PRIVACY_PREAMBLE + """この画像に含まれる家族
 def extract_family_from_text_gemini(text: str) -> Optional[dict]:
     """テキストから家族構成を抽出（Gemini版）。失敗時は None（原因は get_last_error()）"""
     global last_error
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         last_error = "GEMINI_API_KEY が未設定です"
         return None
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
-        last_error = "google-generativeai パッケージが未インストールです"
+        last_error = "google-genai パッケージが未インストールです"
         return None
 
     text = (text or "")[:8000]   # 入力長の上限（巨大入力によるトークンコスト/遅延の暴走を防止）
     prompt = _TEXT_EXTRACT_PROMPT_TMPL.format(text=text)
 
     try:
-        genai.configure(api_key=api_key)
-        try:
-            response = _new_model(genai, _MODEL_NAME).generate_content(prompt)
-        except Exception:
-            response = _new_model(genai, _FALLBACK_MODEL).generate_content(prompt)
-
+        response = _run(prompt, system_instruction=_PRIVACY_PREAMBLE)
         content = response.text or ""
         json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
@@ -444,32 +448,22 @@ def extract_family_from_image_gemini(image_bytes, mime_type: str = "image/jpeg")
     image_bytes は BytesIO または bytes を許容。呼び出し側は処理後に解放すること。
     """
     global last_error
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         last_error = "GEMINI_API_KEY が未設定です"
         return None
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
-        last_error = "google-generativeai パッケージが未インストールです"
+        last_error = "google-genai パッケージが未インストールです"
         return None
 
     # BytesIO / bytes 両対応
     data = image_bytes.getvalue() if hasattr(image_bytes, "getvalue") else image_bytes
-    image_part = {"mime_type": mime_type, "data": data}
 
     try:
-        genai.configure(api_key=api_key)
-        try:
-            response = _new_model(genai, _MODEL_NAME).generate_content(
-                [image_part, _IMAGE_EXTRACT_PROMPT]
-            )
-        except Exception:
-            response = _new_model(genai, _FALLBACK_MODEL).generate_content(
-                [image_part, _IMAGE_EXTRACT_PROMPT]
-            )
-
+        image_part = _inline_part(data, mime_type)
+        response = _run([image_part, _IMAGE_EXTRACT_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
         content = response.text or ""
         json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
@@ -491,24 +485,19 @@ def generate_will_draft_gemini(
     自筆証書遺言の「雛形テンプレート」を生成する。
     弁護士法72条配慮: あくまで一般的な雛形であり、個別事案の助言は行わない。
     """
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         return "❌ APIキーが設定されていません。"
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
-        return "❌ `google-generativeai` パッケージが未インストールです。"
+        return "❌ `google-genai` パッケージが未インストールです。"
 
-    from core.legal_safety import PROMPT_SAFETY_INSTRUCTIONS, with_safety_footer
+    from core.legal_safety import with_safety_footer
 
     distribution_intent = (distribution_intent or "")[:4000]   # 入力長の上限
-    prompt = (
-        _PRIVACY_PREAMBLE
-        + PROMPT_SAFETY_INSTRUCTIONS
-        + f"""
 
-あなたは日本の自筆証書遺言の**雛形テンプレート**を提供する一般情報提供者です。
+    prompt = f"""あなたは日本の自筆証書遺言の**雛形テンプレート**を提供する一般情報提供者です。
 **個別事案の法的判断・助言は行わず、必ず弁護士・公証人への相談を促すこと**。
 
 【家族構成】
@@ -573,16 +562,9 @@ def generate_will_draft_gemini(
 - 公正証書遺言の作成を検討する場合
 
 最後に必ず「個別事案については弁護士・公証人へのご相談が必要です」と明記してください。"""
-    )
 
     try:
-        genai.configure(api_key=api_key)
-        try:
-            model = _new_model(genai, _MODEL_NAME)
-            response = model.generate_content(prompt)
-        except Exception:
-            model = _new_model(genai, _FALLBACK_MODEL)
-            response = model.generate_content(prompt)
+        response = _run(prompt, system_instruction=_advisory_system())
         return with_safety_footer(response.text or "")
     except Exception as e:
         return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
@@ -595,28 +577,17 @@ def extract_family_from_audio(
     音声バイナリを Gemini に送り、文字起こし＋家族構成抽出を1コールで実行する。
     呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
     """
-    api_key = _get_api_key()
-    if not api_key:
+    if not _get_api_key():
         return None
 
     try:
-        import google.generativeai as genai
+        import google.genai  # noqa: F401
     except ImportError:
         return None
 
     try:
-        genai.configure(api_key=api_key)
-
-        # 音声はインライン送信（〜20MB程度まで対応）
-        audio_part = {"mime_type": mime_type, "data": audio_bytes}
-
-        try:
-            model = _new_model(genai, _MODEL_NAME)
-            response = model.generate_content([audio_part, _AUDIO_EXTRACT_PROMPT])
-        except Exception:
-            model = _new_model(genai, _FALLBACK_MODEL)
-            response = model.generate_content([audio_part, _AUDIO_EXTRACT_PROMPT])
-
+        audio_part = _inline_part(audio_bytes, mime_type)
+        response = _run([audio_part, _AUDIO_EXTRACT_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
         content = response.text or ""
         json_match = re.search(r"\{[\s\S]*\}", content)
         if json_match:
