@@ -12,26 +12,43 @@ _MODEL_NAME = "gemini-2.5-flash"
 _FALLBACK_MODEL = "gemini-1.5-flash"
 
 
+# 受理するAPIキー名（大文字小文字のゆれにも対応）
+_API_KEY_NAMES = ("GEMINI_API_KEY", "Gemini_API_KEY", "GOOGLE_API_KEY", "GOOGLE_GENAI_API_KEY")
+_API_KEY_LOWER = ("gemini_api_key", "google_api_key", "google_genai_api_key")
+
+
 def _get_api_key() -> Optional[str]:
     """
-    APIキーを取得（優先順位）:
-    1. st.secrets["GEMINI_API_KEY"] - Streamlit Cloud Secrets / ローカル secrets.toml
-    2. st.secrets["GOOGLE_API_KEY"] - 同上
-    3. 環境変数 GEMINI_API_KEY
-    4. 環境変数 GOOGLE_API_KEY
+    APIキーを取得。st.secrets → 環境変数 の順。
+    名前は GEMINI_API_KEY / Gemini_API_KEY / GOOGLE_API_KEY 等の大小ゆれを許容する。
     """
+    # 1. Streamlit Secrets（明示名 → 大小無視スキャン）
     try:
         import streamlit as st
-        for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        for key in _API_KEY_NAMES:
             try:
                 val = st.secrets.get(key)
                 if val:
                     return val
             except Exception:
                 pass
+        try:
+            for k in st.secrets:
+                if str(k).lower() in _API_KEY_LOWER and st.secrets[k]:
+                    return st.secrets[k]
+        except Exception:
+            pass
     except Exception:
         pass
-    return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    # 2. 環境変数（明示名 → 大小無視スキャン）
+    for key in _API_KEY_NAMES:
+        v = os.environ.get(key)
+        if v:
+            return v
+    for k, v in os.environ.items():
+        if str(k).lower() in _API_KEY_LOWER and v:
+            return v
+    return None
 
 
 def _get_secret(name: str) -> Optional[str]:
