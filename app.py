@@ -846,6 +846,34 @@ elif st.session_state.step == 2:
     num_tax_heirs = tax_heir_info["total"]
     legitime_info = calculate_legitimes(ft, propositus_id)
 
+    # ── 3-0. 診断サマリーカード（最上部・ひと目で結論を提示）──────────────────
+    # 長大な結果ページの冒頭に結論を集約し、離脱を抑えて相談CTA到達率を高める。
+    with st.container(border=True):
+        st.markdown("#### 📊 診断サマリー（ひと目で結論）")
+        _prop = ft.persons[propositus_id]
+        _total = st.session_state.total_assets
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("被相続人", _prop.name or "—")
+        s2.metric("法定相続人", f"{num_heirs}名")
+        if _total > 0:
+            _sum_tax = get_inheritance_tax_estimate(shares, _total, num_heirs, num_tax_heirs)
+            if _sum_tax["estimated_tax"] > 0:
+                s3.metric("相続税の概算", f"{_sum_tax['estimated_tax']//10000:,}万円",
+                          f"財産 {_total//10000:,}万円", delta_color="off")
+            else:
+                s3.metric("相続税の概算", "0万円", "基礎控除内・非課税", delta_color="off")
+        else:
+            s3.metric("相続税の概算", "—", "財産額の入力で算出", delta_color="off")
+        s4.metric("遺留分", "あり" if legitime_info["has_legitime"] else "なし",
+                  "請求リスクに配慮" if legitime_info["has_legitime"] else "兄弟姉妹等のみ",
+                  delta_color="off")
+        st.caption(
+            "▼ この下に 家系図・法定相続分・相続税・遺留分・各種シミュレーション・"
+            "AI診断・PDF出力 を詳しく表示します。"
+        )
+
+    st.divider()
+
     # ── 3-1. 家系図 ──────────────────────────────────────────────────────────
     st.subheader("🌳 家系図")
     col_g, col_l = st.columns([3, 1])
