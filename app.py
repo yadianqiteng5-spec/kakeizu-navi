@@ -2,6 +2,7 @@
 家系図Navi - 相続・事業承継シミュレーター
 ゼロ・リテンションアーキテクチャ: データはセッション内のみ、サーバーへの保存なし
 """
+import os
 import streamlit as st
 from io import BytesIO
 
@@ -189,8 +190,12 @@ def _render_hearing(remaining_calls):
                 if audio is not None:
                     if st.button("📝 文字起こしして回答欄に入れる", key=f"htr_{qkey}"):
                         from core.gemini_client import transcribe_audio
+                        _ab = audio.getvalue()
+                        if len(_ab) > 20 * 1024 * 1024:
+                            st.error("録音データが大きすぎます（20MB上限）。短く録音し直してください。")
+                            st.stop()
                         with st.spinner("Geminiが文字起こし中..."):
-                            t = transcribe_audio(audio.getvalue(), getattr(audio, "type", None) or "audio/wav")
+                            t = transcribe_audio(_ab, getattr(audio, "type", None) or "audio/wav")
                         if t:
                             st.session_state[skey] = t
                             st.session_state.llm_count += 1
@@ -372,6 +377,7 @@ if st.session_state.step == 0:
         input_text = st.text_area(
             "家族構成・状況",
             height=170,
+            max_chars=4000,
             placeholder=(
                 "例：父の山田太郎（昭和20年生まれ）が昨年亡くなりました。\n"
                 "配偶者の花子（昭和23年生まれ）は健在です。\n"
@@ -445,6 +451,10 @@ if st.session_state.step == 0:
                     from core.gemini_client import transcribe_audio
                     audio_bytes = audio_input.getvalue()
                     mime = getattr(audio_input, "type", None) or "audio/wav"
+                    if len(audio_bytes) > 20 * 1024 * 1024:
+                        st.error("録音データが大きすぎます（20MB上限）。短く録音し直してください。")
+                        del audio_bytes
+                        st.stop()
 
                     with st.spinner("Geminiが音声を文字起こし中...（10〜20秒）"):
                         transcript = transcribe_audio(audio_bytes, mime)
@@ -471,6 +481,7 @@ if st.session_state.step == 0:
                 "下記の内容を確認し、必要に応じて修正してください",
                 value=st.session_state.audio_transcript,
                 height=180,
+                max_chars=4000,
                 key="audio_transcript_editor",
             )
             st.session_state.audio_transcript = edited_transcript
@@ -608,7 +619,7 @@ if st.session_state.step == 0:
                     "- 画像を鮮明なものに変える\n"
                     "- テキストと画像を両方入力する"
                 )
-                if err:
+                if err and os.environ.get("KAKEIZU_DEBUG"):
                     st.caption(f"🔍 エラー詳細（管理者向け）: {err}")
                     try:
                         from core.gemini_client import available_models_str
@@ -1341,6 +1352,7 @@ elif st.session_state.step == 2:
                 "懸念事項・相談したいこと（任意）",
                 placeholder="例：長男以外の子への配慮、後継者問題、相続税の負担など",
                 height=80,
+                max_chars=1000,
             )
             run_diag = st.form_submit_button("🤖 AIで診断する", type="primary")
 
@@ -1395,7 +1407,7 @@ elif st.session_state.step == 2:
             st.markdown(diagnosis)
             st.caption(
                 "※ AI診断は参考情報です。最終判断は必ず弁護士・税理士等の専門家にご相談ください。"
-                "AI出力は自社計算ロジック・既知の事実DBと照合済みです。"
+                "AI出力は主要な誤りパターンと自動照合していますが、網羅は保証しません。"
             )
 
     st.divider()
@@ -1451,6 +1463,7 @@ elif st.session_state.step == 2:
                         "次女には保険金で配慮したい。等"
                     ),
                     height=100,
+                    max_chars=2000,
                 )
                 will_btn = st.form_submit_button(
                     "📜 雛形テンプレートを生成", type="primary",
@@ -1480,7 +1493,8 @@ elif st.session_state.step == 2:
                         assets_summary=assets_summary,
                         distribution_intent=distribution_intent,
                     )
-                st.session_state.llm_count += 1
+                if draft and not draft.lstrip().startswith("❌"):
+                    st.session_state.llm_count += 1
 
                 from core.legal_safety import safety_badge
                 from core.ai_validation import validate_ai_output, format_validation_badge

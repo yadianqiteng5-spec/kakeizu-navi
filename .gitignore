@@ -1,3 +1,8 @@
+# シークレット（公開リポジトリへの誤コミット防止）
+.streamlit/secrets.toml
+secrets.toml
+.env
+
 # 別プロジェクト（独立リポジトリ・成果物）
 _ux/
 kakeizu-navi-lp/

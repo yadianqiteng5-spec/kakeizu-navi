@@ -34,6 +34,22 @@ def _get_api_key() -> Optional[str]:
     return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
 
 
+def _get_secret(name: str) -> Optional[str]:
+    """st.secrets → 環境変数 の順で任意の設定値を取得（GEMINI_MODEL 等）。
+    未定義だと _pick_model 内で NameError となり全AI呼び出しがクラッシュするため必須。"""
+    try:
+        import streamlit as st
+        try:
+            val = st.secrets.get(name)
+            if val:
+                return val
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return os.environ.get(name)
+
+
 def is_gemini_available() -> bool:
     """APIキーが設定されているかチェック"""
     return bool(_get_api_key())
@@ -169,6 +185,7 @@ def diagnose_succession_gemini(
             "```\npip install google-generativeai\n```"
         )
 
+    concerns = (concerns or "")[:2000]   # 入力長の上限
     concerns_block = f"\n\n【ユーザーの懸念事項】\n{concerns}" if concerns.strip() else ""
 
     prompt = _PRIVACY_PREAMBLE + _safety_instructions() + f"""
@@ -382,6 +399,7 @@ def extract_family_from_text_gemini(text: str) -> Optional[dict]:
         last_error = "google-generativeai パッケージが未インストールです"
         return None
 
+    text = (text or "")[:8000]   # 入力長の上限（巨大入力によるトークンコスト/遅延の暴走を防止）
     prompt = _TEXT_EXTRACT_PROMPT_TMPL.format(text=text)
 
     try:
@@ -467,6 +485,7 @@ def generate_will_draft_gemini(
 
     from core.legal_safety import PROMPT_SAFETY_INSTRUCTIONS, with_safety_footer
 
+    distribution_intent = (distribution_intent or "")[:4000]   # 入力長の上限
     prompt = (
         _PRIVACY_PREAMBLE
         + PROMPT_SAFETY_INSTRUCTIONS

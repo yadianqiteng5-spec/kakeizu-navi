@@ -7,6 +7,13 @@ reportlab + 組み込み CID フォント（HeiseiKakuGo-W5）を使用するた
 from io import BytesIO
 from datetime import datetime
 from typing import Optional
+from xml.sax.saxutils import escape as _xml_escape
+
+
+def _esc(s) -> str:
+    """reportlab Paragraph はミニHTML(<b>等)を解釈するため、ユーザー由来文字列の
+    <,>,& を無害化し、氏名に記号が混入してもPDF生成が失敗しないようにする。"""
+    return _xml_escape(str(s if s is not None else ""))
 
 
 def _try_register_jp_font() -> str:
@@ -127,7 +134,7 @@ def generate_pdf_report(
     propositus = family_tree.persons[propositus_id]
     birth = f"{propositus.birth_year}年生・" if propositus.birth_year else ""
     story.append(Paragraph(
-        f"<b>被相続人:</b> {propositus.name}（{birth}故人）",
+        f"<b>被相続人:</b> {_esc(propositus.name)}（{birth}故人）",
         s_body,
     ))
     if propositus.assets_yen > 0:
@@ -144,7 +151,7 @@ def generate_pdf_report(
         status = _status_label(sp)
         b = f"{sp.birth_year}年生・" if sp.birth_year else ""
         story.append(Paragraph(
-            f"<b>配偶者:</b> {sp.name}（{b}{status}）", s_body,
+            f"<b>配偶者:</b> {_esc(sp.name)}（{b}{status}）", s_body,
         ))
 
     children = family_tree.get_children(propositus_id)
@@ -163,7 +170,7 @@ def generate_pdf_report(
             status = _status_label(c)
             b = f"{c.birth_year}年生・" if c.birth_year else ""
             story.append(Paragraph(
-                f"　・{c.name}（{b}{status}{adoption_label}）",
+                f"　・{_esc(c.name)}（{b}{status}{adoption_label}）",
                 s_body,
             ))
             if not c.is_alive:
@@ -173,7 +180,7 @@ def generate_pdf_report(
                     if gc and gc.is_alive and not gc.is_renounced:
                         bg = f"{gc.birth_year}年生・" if gc.birth_year else ""
                         story.append(Paragraph(
-                            f"　　└ {gc.name}（{bg}代襲相続人）", s_body,
+                            f"　　└ {_esc(gc.name)}（{bg}代襲相続人）", s_body,
                         ))
 
     # ── 1-2. 親子関係一覧（養子区分明示） ─────────────────────────────
