@@ -1375,12 +1375,36 @@ elif st.session_state.step == 2:
                 )
             assets_summary = "\n".join(assets_lines)
 
-            with st.spinner("Gemini が診断中...（10〜20秒）"):
+            # 確定計算値（自社エンジン）を診断に渡して具体性・根拠を高める
+            facts_lines = [f"法定相続人の数: {num_heirs}名（相続税法上の数: {num_tax_heirs}名）"]
+            if st.session_state.total_assets > 0 and "tax" in dir():
+                facts_lines.append(
+                    f"相続税の概算: {tax['estimated_tax']//10000:,}万円"
+                    f"（基礎控除 {tax['basic_deduction']//10000:,}万円・課税遺産 {tax['taxable_estate']//10000:,}万円）"
+                )
+                facts_lines.append(
+                    f"死亡保険金の非課税枠: {5_000_000 * num_tax_heirs // 10000:,}万円"
+                )
+            if legitime_info.get("has_legitime"):
+                _tot = st.session_state.total_assets
+                for _hid, _frac in legitime_info["individual"].items():
+                    _p = ft.persons.get(_hid)
+                    if _p and _frac > 0:
+                        _amt = f"・約{int(float(_frac) * _tot) // 10000:,}万円" if _tot > 0 else ""
+                        facts_lines.append(f"遺留分 {_p.name}: {float(_frac) * 100:.1f}%{_amt}")
+            else:
+                facts_lines.append("遺留分: 発生しない（兄弟姉妹等のみのため）")
+            if risks:
+                facts_lines.append("事業承継リスク: " + " / ".join(risks))
+            facts_summary = "\n".join(facts_lines)
+
+            with st.spinner("Gemini が診断中...（10〜25秒）"):
                 diagnosis = diagnose_succession_gemini(
                     family_summary=family_summary,
                     assets_summary=assets_summary,
                     shares_summary=explanation,
                     concerns=concerns,
+                    facts_summary=facts_summary,
                 )
 
             st.markdown("#### 📋 診断結果")

@@ -92,8 +92,9 @@ def _safety_settings():
     ]
 
 
-_resolved_model: Optional[str] = None   # 一度解決したモデル名をキャッシュ
 _available_models: list = []            # list() で判明した利用可能モデル（診断用）
+_available_fetched: bool = False        # モデル一覧の取得済みフラグ
+_resolved_models: dict = {}             # prefer 別に解決したモデル名をキャッシュ
 
 
 def available_models_str() -> str:
@@ -118,24 +119,29 @@ def _pick_model(client, prefer: Optional[str] = None) -> str:
       2. 呼び出し側の希望(prefer)
       3. 新しめのflash系 → 旧flash → 任意のflash → 任意のgenerateContent対応
     """
-    global _resolved_model, _available_models
-    if _resolved_model:
-        return _resolved_model
+    global _available_models, _available_fetched
+    key = prefer or "_default_"
+    if key in _resolved_models:
+        return _resolved_models[key]
 
     override = _get_secret("GEMINI_MODEL")
     prefs = [override, prefer,
              "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite",
              "gemini-flash-latest", "gemini-2.0-flash-001"]
 
-    available = []
-    try:
-        for m in client.models.list():
-            acts = getattr(m, "supported_actions", None) or []
-            if "generateContent" in acts:
-                available.append(m.name)   # 例: "models/gemini-2.0-flash"
-    except Exception:
-        available = []
-    _available_models = available
+    # モデル一覧は一度だけ取得して共有
+    if not _available_fetched:
+        avail = []
+        try:
+            for m in client.models.list():
+                acts = getattr(m, "supported_actions", None) or []
+                if "generateContent" in acts:
+                    avail.append(m.name)   # 例: "models/gemini-2.0-flash"
+        except Exception:
+            avail = []
+        _available_models = avail
+        _available_fetched = True
+    available = _available_models
 
     def find(p):
         if not p:
@@ -148,21 +154,22 @@ def _pick_model(client, prefer: Optional[str] = None) -> str:
     for p in prefs:
         hit = find(p)
         if hit:
-            _resolved_model = hit
+            _resolved_models[key] = hit
             return hit
 
     # 希望に合致しなければ、利用可能なflash系→任意を採用
     for a in available:
         if "flash" in a:
-            _resolved_model = a
+            _resolved_models[key] = a
             return a
     if available:
-        _resolved_model = available[0]
+        _resolved_models[key] = available[0]
         return available[0]
 
     # list() が取れない場合の最終手段
-    _resolved_model = override or _MODEL_NAME
-    return _resolved_model
+    fallback = override or prefer or _MODEL_NAME
+    _resolved_models[key] = fallback
+    return fallback
 
 
 def _run(contents, prefer: str = _MODEL_NAME, system_instruction: Optional[str] = None):
@@ -209,10 +216,13 @@ def diagnose_succession_gemini(
     assets_summary: str,
     shares_summary: str,
     concerns: str = "",
+    facts_summary: str = "",
 ) -> str:
     """
-    Geminiで相続・事業承継リスクを診断し、最適な一手を提示する。
-    無料枠の gemini-2.5-flash を使用。
+    Geminiで相続・事業承継リスクを診断し、最適な一手を提示する（gemini-2.5-flash）。
+    facts_summary に自社エンジンの確定計算値を渡すと、一般論でなく
+    その家族の数値に根拠づいた具体的な助言になる。
+    （上位モデルを使う場合は Secrets/env の GEMINI_MODEL で指定可能）
     """
     if not _get_api_key():
         return (
@@ -233,10 +243,14 @@ def diagnose_succession_gemini(
 
     concerns = (concerns or "")[:2000]   # 入力長の上限
     concerns_block = f"\n\n【ユーザーの懸念事項】\n{concerns}" if concerns.strip() else ""
+    facts_block = (
+        f"\n\n【確定計算値（自社エンジンによる正確な数値・これを根拠に）】\n{facts_summary}"
+        if facts_summary.strip() else ""
+    )
 
-    prompt = f"""あなたは日本の相続・事業承継に**詳しい一般情報提供者**です（**弁護士・税理士ではありません**）。
-以下の情報をもとに、リスクを推定し「最優先で検討すべき一般的なアクション」を提示してください。
-個別事案への法的判断・代理・助言は行わないでください。
+    prompt = f"""あなたは日本の相続・事業承継に精通した一般情報提供者です（弁護士・税理士ではありません）。
+下記の【確定計算値】を**必ず根拠として引用**し、一般論ではなく**この家族の数値・構成に即した、具体的で実行可能な助言**を、優先順位をつけて提示してください。
+個別事案への法的判断・代理・断定的助言は避け、推定的表現（「〜と考えられます」「〜が選択肢として考えられます」）を用いてください。
 
 【家族構成】
 {family_summary}
@@ -245,23 +259,25 @@ def diagnose_succession_gemini(
 {assets_summary}
 
 【法定相続分】
-{shares_summary}{concerns_block}
+{shares_summary}{facts_block}{concerns_block}
 
-以下の形式で簡潔に回答してください:
+以下の形式で、各項目とも**具体的な数値・人物名に触れながら**回答してください:
 
-## 🎯 リスク総合評価（一般的傾向）
-- **レベル**: 高 / 中 / 低 （目安）
-- **理由**: （1〜2文で簡潔に、「〜と考えられます」調で）
+## 🎯 リスク総合評価
+- **レベル**: 高 / 中 / 低（目安）
+- **理由**: この家族固有の事情（誰に何が集中・税額・遺留分など）を挙げて1〜2文で
 
-## ⚡ 最優先で検討すべき一般的なアクション
-（具体的なアクションを1つだけ提示してください。「〜することが選択肢として考えられます」調で）
+## ⚡ 最優先で検討すべき一手
+最もインパクトの大きいアクションを**1つだけ**、なぜ最優先かの理由とともに。「〜することが選択肢として考えられます」調で。
 
-## 📋 補足情報（参考）
-- **遺留分**: （配偶者・子の遺留分に関する一般的な注意点）
-- **相続税対策**: （一般に活用できる特例・控除の参考情報）
-- **どの専門家に相談すべきか**: （税理士／弁護士／司法書士のいずれが適しているか）
+## 📋 次に検討したいこと（2〜3点）
+- **遺留分**: 上記の遺留分額に触れ、侵害リスクと配慮の方向性
+- **相続税**: 上記の概算税額を踏まえ、活用しうる特例・控除（配偶者控除／小規模宅地／生命保険非課税枠／二次相続の観点）
+- **事業承継**（自社株がある場合のみ）: 分散リスクと集中の方向性、事業承継税制の検討余地
 
-回答は日本語で、推定的表現（「〜と考えられます」「〜の可能性があります」）を使い、
+## 👤 まず相談すべき専門家
+税理士／弁護士／司法書士のうち、この家族で**最初に相談すべき専門家**を理由とともに1〜2名。
+
 最後に必ず「個別事案については専門家へのご相談が必要です」と明記してください。"""
 
     try:
