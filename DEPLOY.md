@@ -1,6 +1,11 @@
 # 家系図Navi デプロイ手順
 
-Fly.io + Cloudflare（drumnavi.com）構成での公開手順です。
+> **【本番は Streamlit Community Cloud】** 反映手順:
+> `git push origin main` → アプリ右下「Manage app」→ ⋮ →「**Reboot app**」で手動再起動
+> （**自動デプロイは効かないため Reboot 必須**。隣の Delete app は押さないこと）。
+> 以下の Fly.io + Cloudflare 手順は**旧／代替構成**で、現行本番では使用していません。
+
+Fly.io + Cloudflare（drumnavi.com）構成での公開手順です（旧／代替）。
 
 ## 前提
 

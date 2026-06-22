@@ -43,6 +43,12 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
 
+      - name: ヒアリング→家系図組立の回帰検証
+        run: |
+          python -X utf8 tests/test_hearing.py
+        env:
+          PYTHONIOENCODING: utf-8
+
       - name: テスト結果サマリー（成功時）
         if: success()
         run: |
@@ -52,9 +58,9 @@ jobs:
             echo "| 項目 | 結果 |"
             echo "|---|---|"
             echo "| Python | ${{ matrix.python-version }} |"
-            echo "| 単体テスト | 39ケース全通過 |"
+            echo "| 単体テスト（pytest） | 全通過 |"
             echo "| 精度リグレッション | 国税庁公表値と一致 |"
-            echo "| AIバリデーション | 9ケース全通過 |"
+            echo "| ヒアリング回帰 | 全通過 |"
             echo ""
             echo "🌳 デプロイ可能な状態です。"
           } >> $GITHUB_STEP_SUMMARY
