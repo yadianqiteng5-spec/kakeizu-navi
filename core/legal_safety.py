@@ -89,8 +89,3 @@ def with_safety_footer(text: str) -> str:
 def safety_badge() -> str:
     """情報提供バッジのHTMLを返す（st.markdown(..., unsafe_allow_html=True) で使用）"""
     return SAFETY_BADGE_HTML
-
-
-def wrap_prompt_with_safety(prompt: str) -> str:
-    """ユーザー向けプロンプトに非弁活動回避の制約を前置する"""
-    return PROMPT_SAFETY_INSTRUCTIONS + "\n\n" + prompt

@@ -33,6 +33,21 @@ AFF_TAX_URL = "https://h.accesstrade.net/sp/cc?rk=0100npm700ou1t"    # 税理士
 AFF_SHIHO_URL = "https://h.accesstrade.net/sp/cc?rk=0100p36700ou1t"  # アース司法書士事務所
 
 
+def _build_assets_summary(propositus, total_assets, include_notes=False):
+    """被相続人の資産サマリーを組み立てる（AI診断・遺言生成で共有）。"""
+    lines = [
+        f"被相続人の資産: {propositus.assets_yen:,}円"
+        f"（{propositus.assets_yen//10000:,}万円）"
+    ]
+    if propositus.has_business_shares:
+        lines.append("自社株・非上場株を保有")
+    if include_notes and propositus.notes:
+        lines.append(f"備考: {propositus.notes}")
+    if total_assets:
+        lines.append(f"相続財産総額（ユーザー入力）: {total_assets//10000:,}万円")
+    return "\n".join(lines)
+
+
 def _expert_cta_inline(headline, sub, url, grad=("#11998e", "#38ef7d"), label="無料で相談する"):
     """本文フロー内に置く横長の専門家相談CTA（モバイルでも必ず視認できる位置に配置）。"""
     st.markdown(
@@ -1354,26 +1369,17 @@ elif st.session_state.step == 2:
                 height=80,
                 max_chars=1000,
             )
-            run_diag = st.form_submit_button("🤖 AIで診断する", type="primary")
+            run_diag = st.form_submit_button(
+                "🤖 AIで診断する", type="primary", disabled=remaining_calls <= 0
+            )
 
         if run_diag:
             # サマリーを組み立てる
             family_summary = ft.summary()
             propositus = ft.persons[propositus_id]
-            assets_lines = [
-                f"被相続人の資産: {propositus.assets_yen:,}円"
-                f"（{propositus.assets_yen//10000:,}万円）",
-            ]
-            if propositus.has_business_shares:
-                assets_lines.append("自社株・非上場株を保有")
-            if propositus.notes:
-                assets_lines.append(f"備考: {propositus.notes}")
-            if st.session_state.total_assets:
-                assets_lines.append(
-                    f"相続財産総額（ユーザー入力）: "
-                    f"{st.session_state.total_assets//10000:,}万円"
-                )
-            assets_summary = "\n".join(assets_lines)
+            assets_summary = _build_assets_summary(
+                propositus, st.session_state.total_assets, include_notes=True
+            )
 
             # 確定計算値（自社エンジン）を診断に渡して具体性・根拠を高める
             facts_lines = [f"法定相続人の数: {num_heirs}名（相続税法上の数: {num_tax_heirs}名）"]
@@ -1406,6 +1412,9 @@ elif st.session_state.step == 2:
                     concerns=concerns,
                     facts_summary=facts_summary,
                 )
+            # 他のAI機能と同様、成功時のみ利用回数を消費（残回数表示と整合させる）
+            if diagnosis and not diagnosis.lstrip().startswith("❌"):
+                st.session_state.llm_count += 1
 
             st.markdown("#### 📋 診断結果")
             from core.legal_safety import safety_badge
@@ -1498,18 +1507,9 @@ elif st.session_state.step == 2:
                 from core.gemini_client import generate_will_draft_gemini
                 family_summary = ft.summary()
                 propositus = ft.persons[propositus_id]
-                assets_lines = [
-                    f"被相続人の資産: {propositus.assets_yen:,}円"
-                    f"（{propositus.assets_yen//10000:,}万円）",
-                ]
-                if propositus.has_business_shares:
-                    assets_lines.append("自社株・非上場株を保有")
-                if st.session_state.total_assets:
-                    assets_lines.append(
-                        f"相続財産総額（ユーザー入力）: "
-                        f"{st.session_state.total_assets//10000:,}万円"
-                    )
-                assets_summary = "\n".join(assets_lines)
+                assets_summary = _build_assets_summary(
+                    propositus, st.session_state.total_assets, include_notes=False
+                )
 
                 with st.spinner("Geminiが遺言書雛形を作成中...（15〜30秒）"):
                     draft = generate_will_draft_gemini(

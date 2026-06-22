@@ -7,7 +7,6 @@ Gemini API連携モジュール（相続・事業承継診断）
 """
 import os
 import json
-import re
 from typing import Optional
 
 _MODEL_NAME = "gemini-2.5-flash"
@@ -187,15 +186,57 @@ def _run(contents, prefer: str = _MODEL_NAME, system_instruction: Optional[str] 
     primary = _pick_model(client, prefer=prefer)
     try:
         return client.models.generate_content(model=primary, contents=contents, config=cfg)
-    except Exception:
-        # フォールバック（キャッシュではなく明示モデルで再試行）
-        return client.models.generate_content(model=_FALLBACK_MODEL, contents=contents, config=cfg)
+    except Exception as primary_exc:
+        # フォールバック: primary と異なる flash 系で再試行。失敗時は真因(primary_exc)を保全して送出
+        fallback = next(
+            (m for m in _available_models if "flash" in m and m != primary),
+            _FALLBACK_MODEL,
+        )
+        if fallback == primary:
+            raise
+        try:
+            return client.models.generate_content(model=fallback, contents=contents, config=cfg)
+        except Exception:
+            raise primary_exc
 
 
 def _inline_part(data: bytes, mime_type: str):
     """画像・音声などのインラインバイナリを Part 化する。"""
     from google.genai import types
     return types.Part.from_bytes(data=data, mime_type=mime_type)
+
+
+def _extract_json(content: str) -> Optional[dict]:
+    """AI応答から最初のJSONオブジェクトを括弧の対応で抽出して dict を返す（失敗時 None）。
+    末尾に説明文や ``` フェンスが付いても、最初の { から対応する } までで正しく切り出す
+    （旧来の貪欲正規表現 `{...}` が JSON＋後続の日本語（波括弧含む）で壊れる問題を解消）。"""
+    if not content:
+        return None
+    start = content.find("{")
+    if start == -1:
+        return None
+    depth, in_str, esc = 0, False, False
+    for i in range(start, len(content)):
+        c = content[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(content[start:i + 1])
+                except Exception:
+                    return None
+    return None
 
 
 # system_instruction として渡す指示（出力には出さない）
@@ -289,45 +330,7 @@ def diagnose_succession_gemini(
         return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
 
 
-# ─────────────────────────────────────────────────────────────────
-# 音声→家族構成抽出（1ステップ）
-# ─────────────────────────────────────────────────────────────────
-
-_AUDIO_EXTRACT_PROMPT = """この音声を聞いて、話者が説明している家族関係・遺産情報を解析し、
-以下のJSON形式のみで返してください（前置き・コードブロック・後書き不要、JSONオブジェクトのみ）:
-
-{
-  "transcript": "（音声の文字起こし全文）",
-  "persons": [
-    {
-      "id": "p1",
-      "name": "山田太郎",
-      "gender": "male",
-      "birth_year": 1950,
-      "is_alive": false,
-      "is_propositus": true,
-      "assets_yen": 50000000,
-      "has_business_shares": true,
-      "is_renounced": false,
-      "notes": ""
-    }
-  ],
-  "relationships": [
-    {"person1_id": "p1", "person2_id": "p2", "rel_type": "spouse"},
-    {"person1_id": "p1", "person2_id": "p3", "rel_type": "parent_child"}
-  ]
-}
-
-ルール:
-- is_propositus=true は被相続人（亡くなった方・相続される側）のみ1名
-- is_alive=false は故人
-- rel_type は "spouse"（配偶者）または "parent_child"（person1が親→person2が子）
-- gender は "male" / "female" / "unknown"
-- birth_year・assets_yen が不明なら null / 0
-- has_business_shares は自社株・非上場株を保有していれば true
-- is_renounced は明確に「相続放棄した」と述べた場合のみ true"""
-
-
+# ── 音声文字起こしプロンプト ──────────────────────────────────────
 _TRANSCRIBE_PROMPT = """この音声を聞いて、話されている内容を**日本語で文字起こし**してください。
 ルール:
 - 文字起こしの本文のみを返してください（前置き・後書き・引用符・コードブロック不要）
@@ -377,22 +380,27 @@ def transcribe_audio(
     audio_bytes: bytes, mime_type: str = "audio/wav"
 ) -> Optional[str]:
     """
-    音声を文字起こしのみ実行する（家族抽出はしない）。
+    音声を文字起こしのみ実行する（家族抽出はしない）。失敗原因は get_last_error() で取得可。
     呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
     """
+    global last_error
     if not _get_api_key():
+        last_error = "GEMINI_API_KEY が未設定です"
         return None
 
     try:
         import google.genai  # noqa: F401
     except ImportError:
+        last_error = "google-genai パッケージが未インストールです"
         return None
 
     try:
         audio_part = _inline_part(audio_bytes, mime_type)
         response = _run([audio_part, _TRANSCRIBE_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
+        last_error = None
         return (response.text or "").strip() or None
-    except Exception:
+    except Exception as e:
+        last_error = f"{type(e).__name__}: {e}"
         return None
 
 
@@ -446,11 +454,10 @@ def extract_family_from_text_gemini(text: str) -> Optional[dict]:
 
     try:
         response = _run(prompt, system_instruction=_PRIVACY_PREAMBLE)
-        content = response.text or ""
-        json_match = re.search(r"\{[\s\S]*\}", content)
-        if json_match:
+        data = _extract_json(response.text or "")
+        if data is not None:
             last_error = None
-            return json.loads(json_match.group())
+            return data
         last_error = "AIの応答からJSONを抽出できませんでした"
     except Exception as e:
         last_error = f"{type(e).__name__}: {e}"
@@ -480,11 +487,10 @@ def extract_family_from_image_gemini(image_bytes, mime_type: str = "image/jpeg")
     try:
         image_part = _inline_part(data, mime_type)
         response = _run([image_part, _IMAGE_EXTRACT_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
-        content = response.text or ""
-        json_match = re.search(r"\{[\s\S]*\}", content)
-        if json_match:
+        data = _extract_json(response.text or "")
+        if data is not None:
             last_error = None
-            return json.loads(json_match.group())
+            return data
         last_error = "AIの応答からJSONを抽出できませんでした"
     except Exception as e:
         last_error = f"{type(e).__name__}: {e}"
@@ -584,31 +590,3 @@ def generate_will_draft_gemini(
         return with_safety_footer(response.text or "")
     except Exception as e:
         return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
-
-
-def extract_family_from_audio(
-    audio_bytes: bytes, mime_type: str = "audio/wav"
-) -> Optional[dict]:
-    """
-    音声バイナリを Gemini に送り、文字起こし＋家族構成抽出を1コールで実行する。
-    呼び出し側は audio_bytes を渡した後、変数を del して明示的に解放すること。
-    """
-    if not _get_api_key():
-        return None
-
-    try:
-        import google.genai  # noqa: F401
-    except ImportError:
-        return None
-
-    try:
-        audio_part = _inline_part(audio_bytes, mime_type)
-        response = _run([audio_part, _AUDIO_EXTRACT_PROMPT], system_instruction=_PRIVACY_PREAMBLE)
-        content = response.text or ""
-        json_match = re.search(r"\{[\s\S]*\}", content)
-        if json_match:
-            return json.loads(json_match.group())
-    except Exception:
-        pass
-
-    return None

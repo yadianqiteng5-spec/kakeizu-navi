@@ -104,13 +104,6 @@ class FamilyTree:
                 return getattr(r, "adoption_type", "biological")
         return "biological"
 
-    def remove_person(self, person_id: str):
-        self.persons.pop(person_id, None)
-        self.relationships = [
-            r for r in self.relationships
-            if r.person1_id != person_id and r.person2_id != person_id
-        ]
-
     # ── クエリ ───────────────────────────────────────────
 
     def get_spouse(self, person_id: str) -> Optional[str]:
