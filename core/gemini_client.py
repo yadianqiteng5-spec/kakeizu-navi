@@ -239,6 +239,15 @@ def _extract_json(content: str) -> Optional[dict]:
     return None
 
 
+def _strip_echo(text: str) -> str:
+    """system_instruction（プライバシー/内部指示）がモデルにより稀に出力へ復唱される行を除去する。
+    相続診断・遺言の本文には通常現れない内部フレーズのみを対象とし、本文は誤除去しない。"""
+    bad = ("モデル学習", "回答後にデータを保持", "データを保持・記録", "内部指示",
+           "これは個人の家族・資産情報")
+    kept = [ln for ln in (text or "").split("\n") if not any(b in ln for b in bad)]
+    return "\n".join(kept).lstrip("\n")
+
+
 # system_instruction として渡す指示（出力には出さない）
 _PRIVACY_PREAMBLE = (
     "これは個人の家族・資産情報です。モデル学習に使用しないでください。"
@@ -325,9 +334,10 @@ def diagnose_succession_gemini(
         response = _run(prompt, system_instruction=_advisory_system())
         # 非弁活動回避: 統一フッターを付加
         from core.legal_safety import with_safety_footer
-        return with_safety_footer(response.text or "")
+        return with_safety_footer(_strip_echo(response.text or ""))
     except Exception as e:
-        return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
+        detail = f"\n\n`{e}`" if os.environ.get("KAKEIZU_DEBUG") else ""
+        return "❌ AI生成に失敗しました。時間をおいて再試行するか、デモデータをお試しください。" + detail
 
 
 # ── 音声文字起こしプロンプト ──────────────────────────────────────
@@ -587,6 +597,7 @@ def generate_will_draft_gemini(
 
     try:
         response = _run(prompt, system_instruction=_advisory_system())
-        return with_safety_footer(response.text or "")
+        return with_safety_footer(_strip_echo(response.text or ""))
     except Exception as e:
-        return f"❌ Gemini API 呼び出し中にエラーが発生しました:\n\n`{str(e)}`"
+        detail = f"\n\n`{e}`" if os.environ.get("KAKEIZU_DEBUG") else ""
+        return "❌ AI生成に失敗しました。時間をおいて再試行するか、デモデータをお試しください。" + detail
