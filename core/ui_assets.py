@@ -162,7 +162,19 @@ def inject_seo_meta():
         "inLanguage": "ja",
         "image": _OGP_IMAGE,
         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "JPY"},
-        "author": {"@type": "Person", "name": "Mirai Navi"},
+        "author": {"@type": "Organization", "name": "Mirai Navi", "url": "https://mirainavi.net/"},
+        "publisher": {"@type": "Organization", "name": "Mirai Navi", "url": "https://mirainavi.net/"},
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "家系図Navi｜相続・事業承継ガイド",
+            "url": "https://kakeizu.appsnavi.net/",
+        },
+        "sameAs": [
+            "https://kakeizu.appsnavi.net/",
+            "https://mirainavi.net/",
+            "https://teso-navi.vercel.app/",
+            "https://blog.livedoor.jp/infinity_peace24/",
+        ],
         "featureList": [
             "法定相続分計算（民法900条準拠）",
             "相続税概算（国税庁速算表使用）",
@@ -281,9 +293,30 @@ def inject_seo_meta():
         "url": _OGP_URL,
         "description": _OGP_DESC,
         "inLanguage": "ja",
-        "publisher": {"@type": "Person", "name": "Mirai Navi"},
+        "publisher": {"@type": "Organization", "name": "Mirai Navi", "url": "https://mirainavi.net/"},
+        "sameAs": [
+            "https://kakeizu.appsnavi.net/",
+            "https://mirainavi.net/",
+            "https://teso-navi.vercel.app/",
+        ],
     }
     _WEBSITE_JSONLD_STR = _json_seo.dumps(_WEBSITE_JSONLD, ensure_ascii=False)
+
+    # Organization schema（運営者ブランド「Mirai Navi」を全プロパティで同一エンティティとして統合）
+    _ORG_JSONLD = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Mirai Navi",
+        "url": "https://mirainavi.net/",
+        "description": "相続・事業承継・終活など暮らしの意思決定を支える ○○Navi シリーズの運営者。",
+        "sameAs": [
+            "https://kakeizu.appsnavi.net/",
+            "https://mirainavi.net/",
+            "https://teso-navi.vercel.app/",
+            "https://blog.livedoor.jp/infinity_peace24/",
+        ],
+    }
+    _ORG_JSONLD_STR = _json_seo.dumps(_ORG_JSONLD, ensure_ascii=False)
 
     st.markdown(
         f"""<script>
@@ -359,6 +392,7 @@ def inject_seo_meta():
                 ['kakeizu-faq',         {repr(_FAQ_JSONLD_STR)}],
                 ['kakeizu-breadcrumb',  {repr(_BREADCRUMB_JSONLD_STR)}],
                 ['kakeizu-website',     {repr(_WEBSITE_JSONLD_STR)}],
+                ['kakeizu-org',         {repr(_ORG_JSONLD_STR)}],
             ];
             jsonlds.forEach(([id, data]) => {{
                 if (!head.querySelector(`script[data-id="${{id}}"]`)) {{
