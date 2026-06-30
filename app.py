@@ -1801,7 +1801,7 @@ st.markdown(
     <br>
     🔗 姉妹サイト：
     <a href="https://mirainavi.net/?utm_source=note&utm_medium=article&utm_campaign=brand-story&utm_content=cta_text_bottom" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">ミライNavi</a>｜
-    <a href="https://teso-navi.vercel.app/" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">手相ナビ</a>｜
+    <a href="https://teso.appsnavi.net/" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">手相ナビ</a>｜
     <a href="https://blog.livedoor.jp/infinity_peace24/" target="_blank" rel="noopener" style="color:#16A085;font-weight:600;text-decoration:none;margin:0 6px;">運営ブログ</a>
     </div>
     </div>""",
